@@ -27,4 +27,9 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
     db.init_app(app)
     admin_app.init_app(app)
+    from app.main import bp as main_bp
+
+    app.register_blueprint(main_bp)
     return app
+
+from app import models
