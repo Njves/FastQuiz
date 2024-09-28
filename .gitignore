@@ -11,3 +11,5 @@ __pycache__
 app/__init__
 logs/
 .env-prod
+client/node_modules
+client/build
