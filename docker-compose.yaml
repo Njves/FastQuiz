@@ -1,0 +1,27 @@
+version: '3.9'
+services:
+  web:
+    build: .
+    container_name: flask_app
+    command: flask run --host=0.0.0.0 --port=5000  # или python app.py, если это ваш способ запуска
+    volumes:
+      - .:/fastquiz  # если ваш WORKDIR в Dockerfile /fastquiz
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://admin:admin@db:5432/server
+    depends_on:
+      - db
+
+  db:
+    image: postgres:latest
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: server
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
