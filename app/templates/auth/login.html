@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block content %}
+<link href="{{ url_for('static', filename='style/login.css') }}" rel="stylesheet">
+
+<form class="container-fluid" name="buttons_auth_reg" method="GET">
+    <div class="row justify-content-center" style="margin-top: 40px;">
+        <a class="container-buttons" href="{{ url_for('auth.register') }}" id="registration_btn">Перейти в регистрацию</a>
+    </div>
+</form>
+<style>
+    body {
+        background-color: #333746;
+        color: #ffffff;
+    }
+
+    .card {
+        background-color: #495057;
+        border: 1px solid #495057;
+        color: #ffffff;
+    }
+
+    .card-header {
+        background-color: #343a40;
+        color: #ffffff;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #0056b3;
+    }
+</style>
+</head>
+<body>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Войти</div>
+                <div class="card-body">
+                    {% include "flash.html" %}
+                    <form method="POST" action="{{ url_for('auth.login') }}">
+                        <div class="form-group mb-3">
+                            <label for="username">Имя пользователя:</label>
+                            <input type="text" class="form-control" id="username" name="username" placeholder="Введите имя пользователя">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="password">Пароль:</label>
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Введите пароль">
+                        </div>
+                        <div class="form-group mb-3">
+                            <a type="button" class="btn btn-primary mb-2" href="{{ url_for('auth.forgot_password') }}">Восстановить пароль</a>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Войти</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
