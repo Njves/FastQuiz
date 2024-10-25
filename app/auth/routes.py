@@ -12,7 +12,7 @@ def guest_auth():
     existing_user = User.query.filter_by(username=username).first()
     if existing_user:
         return jsonify({'error': 'Username already exists'}), 400
-    user = User()
+    user = User(is_guest=True)
     user.generate_token()
     user.username = username if username is not None else user.token
     db.session.add(user)

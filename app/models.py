@@ -42,6 +42,7 @@ quiz_creator = db.Table('quiz_creator',
 def load_user(user_id):
     return User.query.get(user_id)
 
+
 @login_manager.request_loader
 def load_user_from_request(request):
     token = request.args.get('token')
@@ -58,12 +59,14 @@ def load_user_from_request(request):
             return user
     return None
 
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(128), nullable=False, unique=True)
-    password_hash = db.Column(db.String(256), nullable=False)
+    password_hash = db.Column(db.String(256))
     quizzes_created = db.relationship(
         'Quiz', secondary=quiz_creator, backref='creators', lazy='dynamic')
+    is_guest = db.Column(db.Boolean, default=False)
     token = db.Column(db.String(256), unique=True, nullable=True)
     role = db.Column(db.String(5), nullable=False, default='user')
 
@@ -76,12 +79,14 @@ class User(db.Model, UserMixin):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-    
+
     def generate_token(self):
         token = secrets.token_hex(32)
-        while User.query.filter_by(token=token).first() is not None:  # Проверка уникальности
+        # Проверка уникальности
+        while User.query.filter_by(token=token).first() is not None:
             token = secrets.token_hex(32)
         self.token = token
+
 
 class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -115,3 +120,21 @@ class Answer(db.Model):
 
     def __repr__(self):
         return f'Answer {self.id}, Text: {self.text}, Is Correct: {self.is_correct}'
+
+
+class QuizSession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey(
+        'user.id', ondelete='CASCADE'))
+    quiz_id = db.Column(db.Integer, db.ForeignKey(
+        'quiz.id', ondelete='CASCADE'))
+    score = db.Column(db.Integer, default=0)
+    current_question_index = db.Column(db.Integer, default=0)
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    finished_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='quiz_sessions')
+    quiz = db.relationship('Quiz', backref='sessions')
+
+    def __repr__(self):
+        return f'QuizSession {self.id}, User: {self.user_id}, Quiz: {self.quiz_id}, Score: {self.score}'
