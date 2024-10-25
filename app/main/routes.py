@@ -1,6 +1,8 @@
 from flask import jsonify, render_template, request
+from flask_login import login_required
 from app.models import Quiz, Question, Answer, User
 
+from app import db
 from app.main import bp
 
 
@@ -10,6 +12,7 @@ def index():
 
 
 @bp.route('/start_quiz', methods=['POST'])
+@login_required
 def start_quiz():
     # user_id = request.json.get('user_id')
     quiz_id = request.json.get('quiz_id')
@@ -23,7 +26,8 @@ def start_quiz():
     if not first_question:
         return jsonify({'message': 'No questions available for this quiz'}), 404
     answers = Answer.query.filter_by(question_id=first_question.id).all()
-    answers_list = [{'id': answer.id, 'text': answer.text} for answer in answers]
+    answers_list = [{'id': answer.id, 'text': answer.text}
+                    for answer in answers]
     return jsonify({
         'message': 'Quiz started',
         'session_data': session_data,
@@ -36,19 +40,21 @@ def start_quiz():
 
 
 @bp.route('/next_question', methods=['POST'])
+@login_required
 def next_question():
     # user_id = request.json.get('user_id')
     session_data = request.json.get('session_data')
     quiz_id = request.json.get('quiz_id')
     quiz = Quiz.query.get(quiz_id)
     questions = list(quiz.questions)
-    
+
     if not quiz:
         return jsonify({'message': 'Quiz not found'}), 404
     next_question_index = session_data['current_question_index'] + 1
     if next_question_index < len(questions):
         current_question = questions[next_question_index]
-        answers = [{'id': answer.id, 'text': answer.text} for answer in current_question.answers]
+        answers = [{'id': answer.id, 'text': answer.text}
+                   for answer in current_question.answers]
         session_data['current_question_index'] += 1
 
         return jsonify({
@@ -63,8 +69,8 @@ def next_question():
         return finish_quiz()
 
 
-
 @bp.route('/submit_answer', methods=['POST'])
+@login_required
 def submit_answer():
     # user_id = request.json.get('user_id')
     answer_id = request.json.get('answer_id')
@@ -84,6 +90,7 @@ def submit_answer():
 
 
 @bp.route('/finish_quiz', methods=['POST'])
+@login_required
 def finish_quiz():
     # добавить передачу юзера и сохранение результата в бд
     session_data = request.json.get('session_data')

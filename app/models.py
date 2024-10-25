@@ -1,4 +1,5 @@
 from datetime import datetime
+import secrets
 
 
 from flask_login import UserMixin
@@ -41,6 +42,21 @@ quiz_creator = db.Table('quiz_creator',
 def load_user(user_id):
     return User.query.get(user_id)
 
+@login_manager.request_loader
+def load_user_from_request(request):
+    token = request.args.get('token')
+    if token:
+        user = User.query.filter_by(token=token).first()
+        if user:
+            return user
+
+    token = request.headers.get('Authorization')
+    if token:
+        token = token.replace('Bearer ', '', 1)
+        user = User.query.filter_by(token=token).first()
+        if user:
+            return user
+    return None
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -48,6 +64,8 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String(256), nullable=False)
     quizzes_created = db.relationship(
         'Quiz', secondary=quiz_creator, backref='creators', lazy='dynamic')
+    token = db.Column(db.String(256), unique=True, nullable=True)
+    role = db.Column(db.String(5), nullable=False, default='user')
 
     def __repr__(self) -> str:
         return f'User {self.id}, Username: {self.username}, email: {self.email}, date: {self.date},' \
@@ -58,7 +76,12 @@ class User(db.Model, UserMixin):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-
+    
+    def generate_token(self):
+        token = secrets.token_hex(32)
+        while User.query.filter_by(token=token).first() is not None:  # Проверка уникальности
+            token = secrets.token_hex(32)
+        self.token = token
 
 class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
