@@ -31,6 +31,8 @@ def create_app(config_class=Config):
     app.register_blueprint(main_bp)
     from app.auth import bp as auth_bp
     app.register_blueprint(auth_bp)
+    from app.room import bp as room_bp
+    app.register_blueprint(room_bp)
     return app
 
 from app import models

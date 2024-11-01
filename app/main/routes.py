@@ -15,7 +15,6 @@ def index():
 @bp.route('/start_quiz', methods=['POST'])
 @login_required
 def start_quiz():
-    print("aaa")
     quiz_id = request.json.get('quiz_id')
     quiz = Quiz.query.get(quiz_id)
 

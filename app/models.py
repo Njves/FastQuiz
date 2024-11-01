@@ -138,3 +138,13 @@ class QuizSession(db.Model):
 
     def __repr__(self):
         return f'QuizSession {self.id}, User: {self.user_id}, Quiz: {self.quiz_id}, Score: {self.score}'
+
+class QuizRoom(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'))
+    room_code = db.Column(db.String(8), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    host_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    quiz = db.relationship('Quiz', backref='rooms')
+    host = db.relationship('User', backref='hosted_rooms')
