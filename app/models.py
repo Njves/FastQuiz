@@ -132,12 +132,15 @@ class QuizSession(db.Model):
     current_question_index = db.Column(db.Integer, default=0)
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
     finished_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    room_id = db.Column(db.Integer, db.ForeignKey('quiz_room.id'), nullable=True)
+    
     user = db.relationship('User', backref='quiz_sessions')
     quiz = db.relationship('Quiz', backref='sessions')
+    room = db.relationship('QuizRoom', backref='sessions')
 
     def __repr__(self):
         return f'QuizSession {self.id}, User: {self.user_id}, Quiz: {self.quiz_id}, Score: {self.score}'
+
 
 class QuizRoom(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -148,3 +151,6 @@ class QuizRoom(db.Model):
 
     quiz = db.relationship('Quiz', backref='rooms')
     host = db.relationship('User', backref='hosted_rooms')
+
+    def __repr__(self):
+        return f'QuizRoom {self.id}, Quiz: {self.quiz_id}, Code: {self.room_code}, Host: {self.host_id}'
