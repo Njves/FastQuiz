@@ -1,9 +1,30 @@
-import flask
-from flask import jsonify, request
+from flask import jsonify
+from flask import request
 from flask_login import login_user, logout_user, login_required
-from app import db
+
+from app import db, login_manager
 from app.auth import bp
 from app.models import User
+import jwt
+
+@login_manager.request_loader
+def load_user_from_request(request):
+    token = request.args.get('token')
+    if token:
+        user = User.query.filter_by(token=token).first()
+        if user:
+            return user
+    token = request.args.get('token')
+    if token:
+        token = token.replace('Bearer ', '', 1)
+        try:
+            token = jwt.decode(token, 'test', algorithms=['HS256'])['user_id']
+        except TypeError:
+            pass
+        user = User.query.filter_by(token=token).first()
+        if user:
+            return user
+    return None
 
 
 @bp.route('/guest_auth', methods=['POST'])
