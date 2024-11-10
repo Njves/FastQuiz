@@ -19,14 +19,8 @@ def load_user_from_request(request):
     token = request.args.get('token')
     if token:
         token = token.replace('Bearer ', '', 1)
-        try:
-            token = jwt.decode(token, 'test', algorithms=['HS256'])['user_id']
-        except TypeError:
-            pass
-        user = User.query.filter_by(token=token).first()
-        if user:
-            return user
-    return
+        return User.query.filter_by(token=token).first()
+    return None
 
 
 @bp.route('/guest_auth', methods=['POST'])
