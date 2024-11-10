@@ -1,3 +1,5 @@
+import random
+
 from flask import jsonify
 from flask import request
 from flask_login import login_user, logout_user, login_required
@@ -6,6 +8,12 @@ from app import db, login_manager
 from app.auth import bp
 from app.models import User
 import jwt
+
+animals = [
+    "Lion", "Tiger", "Elephant", "Giraffe", "Zebra", "Kangaroo",
+    "Panda", "Koala", "Penguin", "Dolphin", "Whale", "Shark",
+    "Eagle", "Falcon", "Owl", "Wolf", "Fox", "Bear", "Deer", "Rabbit"
+]
 
 @login_manager.request_loader
 def load_user_from_request(request):
@@ -24,7 +32,7 @@ def load_user_from_request(request):
         user = User.query.filter_by(token=token).first()
         if user:
             return user
-    return None
+    return
 
 
 @bp.route('/guest_auth', methods=['POST'])
@@ -33,6 +41,7 @@ def guest_auth():
     existing_user = User.query.filter_by(username=username).first()
     if existing_user:
         return jsonify({'error': 'Username already exists'}), 400
+
     user = User(is_guest=True)
     user.generate_token()
     user.username = username if username is not None else user.token
@@ -45,9 +54,12 @@ def guest_auth():
         while User.query.filter_by(username=user.username).first() is not None:
             user.username = f'guest_{user.id}_{counter}'
             counter += 1
-
         db.session.commit()
-    return jsonify({'token': user.token, 'username': user.username, 'message': 'New guest user created'}), 201
+    return jsonify({
+        'token': user.token,
+        'username': user.username,
+        'message': 'New guest user created'
+    }), 201
 
 
 @bp.route('/register', methods=['POST'])
@@ -59,6 +71,7 @@ def register():
     existing_user = User.query.filter_by(username=username).first()
     if existing_user:
         return jsonify({'error': 'Username already exists'}), 400
+
     user = User(
         username=username
     )
