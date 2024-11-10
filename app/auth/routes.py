@@ -9,12 +9,6 @@ from app.auth import bp
 from app.models import User
 import jwt
 
-animals = [
-    "Lion", "Tiger", "Elephant", "Giraffe", "Zebra", "Kangaroo",
-    "Panda", "Koala", "Penguin", "Dolphin", "Whale", "Shark",
-    "Eagle", "Falcon", "Owl", "Wolf", "Fox", "Bear", "Deer", "Rabbit"
-]
-
 @login_manager.request_loader
 def load_user_from_request(request):
     token = request.args.get('token')
