@@ -5,6 +5,7 @@ import secrets
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db, login_manager
+import jwt
 
 quiz_question = db.Table('quiz_question',
                          db.Column('quiz_id', db.Integer, db.ForeignKey(
@@ -81,11 +82,8 @@ class User(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
 
     def generate_token(self):
-        token = secrets.token_hex(32)
-        # Проверка уникальности
-        while User.query.filter_by(token=token).first() is not None:
-            token = secrets.token_hex(32)
-        self.token = token
+        self.token = jwt.encode({'user_id': self.id}, 'test', algorithm='HS256')
+        return
 
 
 class Quiz(db.Model):
