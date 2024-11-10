@@ -82,8 +82,11 @@ class User(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
 
     def generate_token(self):
-        self.token = jwt.encode({'user_id': self.id}, 'test', algorithm='HS256')
-        return
+        token = secrets.token_hex(32)
+        # Проверка уникальности
+        while User.query.filter_by(token=token).first() is not None:
+            token = secrets.token_hex(32)
+        self.token = token
 
 
 class Quiz(db.Model):
