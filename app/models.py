@@ -72,8 +72,7 @@ class User(db.Model, UserMixin):
     role = db.Column(db.String(5), nullable=False, default='user')
 
     def __repr__(self) -> str:
-        return f'User {self.id}, Username: {self.username}, email: {self.email}, date: {self.date},' \
-               f' last_seen: {self.last_seen}'
+        return f'User {self.id}, Username: {self.username}'
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
