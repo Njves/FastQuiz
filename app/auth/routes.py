@@ -35,6 +35,14 @@ def guest_auth():
     user.username = username if username is not None else user.token
     db.session.add(user)
     db.session.commit()
+    if username is None:
+        username = f'guest_{user.id}'
+        counter = 0
+        while User.query.filter_by(username=username).first() is not None:
+            counter += 1
+            username = f'guest_{user.id}_{counter}'
+        user.username = username
+        db.session.commit()
     return jsonify({
         'token': user.token,
         'username': user.username,
