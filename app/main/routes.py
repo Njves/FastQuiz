@@ -12,6 +12,9 @@ from app.main import bp
 def index():
     return render_template('base.html')
 
+@bp.route('/quiz')
+def quiz():
+    return render_template('quiz/quiz.html')
 
 @bp.route('/start_quiz', methods=['POST'])
 @login_required
