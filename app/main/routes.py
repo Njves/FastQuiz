@@ -125,3 +125,44 @@ def finish_quiz():
     db.session.delete(quiz_session)
     db.session.commit() 
     return jsonify({'score': final_score, 'message': 'Quiz finished'})
+
+
+@bp.route('/create_quiz', methods=['POST'])
+@login_required
+def create_quiz():
+    data = request.get_json()
+    title = data.get('title')
+    description = data.get('description')
+    questions_data = data.get('questions')
+    if not title or not description or not questions_data:
+        return jsonify({"error": "Missing required fields"}), 400
+    quiz = Quiz(
+            title=title,
+            description=description,
+            count_question=len(questions_data)
+        )
+    db.session.add(quiz)
+    for question_data in questions_data:
+        question_text = question_data.get('text')
+        answers_data = question_data.get('answers')
+
+        if not question_text or not answers_data:
+            return jsonify({"error": "Each question must have text and answers"}), 400
+
+        question = Question(text=question_text)
+        quiz.questions.append(question)
+
+        for answer_data in answers_data:
+            answer_text = answer_data.get('text')
+            is_correct = answer_data.get('is_correct', False)
+            if not answer_text:
+                return jsonify({"error": "Each answer must have text"}), 400
+            answer = Answer(
+                 text=answer_text,
+                is_correct=is_correct
+            )
+            question.answers.append(answer)
+    quiz.creators.append(current_user)
+    db.session.commit()
+
+    return jsonify({"message": "Quiz created successfully", "quiz_id": quiz.id}), 201
