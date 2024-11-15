@@ -11,12 +11,11 @@ import jwt
 
 @login_manager.request_loader
 def load_user_from_request(request):
-    token = request.args.get('token')
+    token = request.headers.get('Authorization')
     if token:
         user = User.query.filter_by(token=token).first()
         if user:
             return user
-    token = request.args.get('token')
     if token:
         token = token.replace('Bearer ', '', 1)
         return User.query.filter_by(token=token).first()

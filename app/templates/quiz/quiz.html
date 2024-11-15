@@ -1,41 +1,292 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <style>
-         body, html {
-            height: 100%;
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
         }
-        .buttons-container {
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        .quiz-container {
+            width: 90%;
+            max-width: 600px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .quiz-header h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .quiz-header p {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .quiz-header span {
+            font-size: 14px;
+            color: #888;
+            display: block;
+            margin-bottom: 20px;
+        }
+
+        .quiz-body {
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
-            height: 100%;
+            align-items: center;
         }
-        .buttons {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-template-rows: repeat(2, 1fr);
+
+        .question-container {
+            margin-bottom: 20px;
+        }
+
+        .question-container p {
+            font-size: 18px;
+            color: #333;
+        }
+
+        .answer-buttons {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
             gap: 10px;
-            padding: 20px;
+            margin-top: 10px;
+        }
+
+        .answer-buttons button {
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #767676;
+            border-radius: 4px;
+            cursor: pointer;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+
+        .answer-buttons button:hover {
+            background-color: #ffd700;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background-color: #1c73de;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn:hover {
+            background-color: #45a049;
+        }
+
+        #next-button {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            align-items: center;
         }
     </style>
 </head>
-<body>
-<div class="buttons-container">
-    <div class="buttons">
-        <button class="btn btn-danger">Ответ</button>
-        <button class="btn btn-danger">Ответ</button>
-        <button class="btn btn-danger">Ответ</button>
-        <button class="btn btn-danger">Ответ</button>
-    </div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-<script>
 
-</script>
+<body>
+    <div class="quiz-container">
+        <div class="quiz-header">
+            <h1>{{ quiz.title }}</h1>
+            <p>{{ quiz.description }}</p>
+            <span id="question-count">Всего вопросов: {{ quiz.count_question }}</span>
+        </div>
+        <button id="start-button" class="btn" onclick="startQuizRequest({{ quiz.id }})">Start Quiz</button>
+        <div class="quiz-body" id="quiz-body" style="display: none;">
+            <div id="question-container" class="question-container">
+                <p id="question-text"> Здесь будет отображаться вопрос... </p>
+                <div id="answer-buttons" class="answer-buttons"></div>
+            </div>
+        </div>
+        <button id="next-button" class="btn" onclick="nextQuestion()">Следующий вопрос</button>
+    </div>
+
+    <script>
+        let sessionID = null;
+        let isRequestInProgress = false;
+        const token = localStorage.getItem('token');
+        console.log(token)
+        function startQuizRequest(quiz_id) {
+            if (isRequestInProgress) return;
+            isRequestInProgress = true;
+            fetch('/start_quiz', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ quiz_id: quiz_id })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message === 'Quiz started') {
+                        isRequestInProgress = false;
+                        sessionID = data.session_id;
+                        document.getElementById('start-button').style.display = 'none';
+                        document.getElementById('quiz-body').style.display = 'block';
+                        loadQuestion(data);
+                    } else {
+                        console.error(data.message);
+                    }
+                })
+
+                .catch(error => {
+                    isRequestInProgress = false;
+                    console.error('Error starting quiz:', error);
+                })
+        }
+
+        function loadQuestion(data) {
+            questionData = data.question
+            document.getElementById('question-text').innerText = questionData.text;
+            document.getElementById('question-count').innerText = `Вопрос ${data.number + 1} из ${data.count_question}`;
+
+            const answersContainer = document.getElementById('answer-buttons');
+            answersContainer.innerHTML = '';
+            if (data.number + 1 === data.count_question) {
+                document.getElementById('next-button').textContent = "Finish Quiz"
+            }
+            questionData.answers.forEach(answer => {
+                const button = document.createElement('button');
+                button.classList.add('btn');
+                button.setAttribute('data-id', answer.id);
+                button.innerText = answer.text;
+                button.onclick = () => submitAnswer(answer.id);
+                answersContainer.appendChild(button);
+            });
+        }
+
+        function submitAnswer(answerID) {
+            if (isRequestInProgress) return; // Предотвращаем повторный запрос
+            isRequestInProgress = true;
+            fetch('/submit_answer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ answer_id: answerID, session_id: sessionID })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    isRequestInProgress = false;
+                    if (data.message === 'Answer received') {
+                        highlightAnswers(data.correct_answer_id, answerID);
+                    } else {
+                        console.error(data.message);
+                    }
+                })
+                .catch(error => {
+                    isRequestInProgress = false;
+                    console.error('Error submitting answer:', error);
+                })
+        }
+
+        function highlightAnswers(correctAnswerID, userAnswerID) {
+            const answerButtons = document.querySelectorAll('#answer-buttons .btn');
+            answerButtons.forEach(button => {
+                const buttonAnswerID = parseInt(button.getAttribute('data-id'));
+                const isCorrect = buttonAnswerID === correctAnswerID;
+                const isUserAnswer = buttonAnswerID === userAnswerID
+                console.log(isCorrect, typeof (userAnswerID), typeof (correctAnswerID), button)
+                if (isCorrect) {
+                    button.style.backgroundColor = '#4CAF50';  // Green for correct answer
+                } else if (isUserAnswer) {
+                    button.style.backgroundColor = '#FF6347';  // Red for incorrect user answer
+                } else {
+                    button.style.backgroundColor = '#767676';  // Default for unselected answers
+                }
+            });
+
+            // Show the "Next Question" button after highlighting answers
+            document.getElementById('next-button').style.display = 'flex';
+        }
+
+        function nextQuestion() {
+            if (isRequestInProgress) return; // Предотвращаем повторный запрос
+            isRequestInProgress = true;
+            if (!sessionID) {
+                console.error('Session ID is missing.');
+                return;
+            }
+
+            fetch('/next_question', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ session_id: sessionID })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    isRequestInProgress = false;
+                    if (data.message === 'Next question retrieved') {
+                        loadQuestion(data);
+                        document.getElementById('next-button').style.display = 'none';
+                    } else if (data.message === 'No more questions available') {
+                        finishQuiz();
+                    } else {
+                        console.error(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error retrieving next question:', error)
+                    isRequestInProgress = false;
+                });
+        }
+
+        function finishQuiz() {
+            fetch('/finish_quiz', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ session_id: sessionID })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message === 'Quiz finished') {
+                        const score = data.score;
+                        const totalQuestions = document.getElementById('question-count').innerText.split(" из ")[1];
+                        document.getElementById('quiz-body').style.display = 'none';
+                        document.querySelector('.quiz-container').innerHTML = `
+                    <div class="quiz-header">
+                        <h1>Результаты викторины</h1>
+                        <p>Ваш результат: ${score} из ${totalQuestions}</p>
+                    </div>
+                `;
+                    } else {
+                        console.error(data.message);
+                    }
+                })
+                .catch(error => console.error('Error finishing quiz:', error));
+        }
+    </script>
 </body>
+
 </html>

@@ -12,9 +12,12 @@ from app.main import bp
 def index():
     return render_template('base.html')
 
-@bp.route('/quiz')
-def quiz():
-    return render_template('quiz/quiz.html')
+@bp.route('/quiz/<int:quiz_id>')
+def quiz(quiz_id):
+    quiz = Quiz.query.get(quiz_id)
+    if not quiz:
+        return jsonify({'message': 'Quiz not found'}), 404
+    return render_template('quiz/quiz.html', quiz=quiz)
 
 @bp.route('/start_quiz', methods=['POST'])
 @login_required
@@ -84,14 +87,12 @@ def submit_answer():
     session_id = request.json.get('session_id')
 
     answer = Answer.query.get(answer_id)
+    correct_answer = Answer.query.filter_by(question_id=answer.question_id, is_correct=True).first()
     if not answer:
         return jsonify({'message': 'Answer not found'}), 404
     quiz_session = QuizSession.query.get(session_id)
     if answer.is_correct:
         quiz_session.score += 1
-        result = 'correct'
-    else:
-        result = 'incorrect'
     if not current_user.is_guest:
         user_ans = user_answer.insert().values(
             user_id=current_user.id,
@@ -101,10 +102,10 @@ def submit_answer():
             submitted_at=datetime.utcnow()
         )
         db.session.execute(user_ans)
-        db.session.commit()
+    db.session.commit()
     return jsonify({
         'message': 'Answer received',
-        'result': result,
+        'correct_answer_id': correct_answer.id,
         'session_id': quiz_session.id
     })
 
@@ -122,5 +123,5 @@ def finish_quiz():
                                             quiz_id=quiz_session.quiz_id, score=final_score)
         db.session.execute(record)
     db.session.delete(quiz_session)
-    db.session.commit()  # Сохраняем изменения в базе данных
+    db.session.commit() 
     return jsonify({'score': final_score, 'message': 'Quiz finished'})
