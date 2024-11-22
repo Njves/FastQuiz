@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="container-fluid d-flex p-2 flex-wrap">
+        {% for quiz in quiz_list %}
+            <div class="card p-2 m-2" style="width: 18rem;">
+                <img src="https://random.imagecdn.app/v1/image?width=500&height=150" class="card-img-top" alt="...">
+                <div class="card-body">
+                    <h5 class="card-title">{{ quiz.title }}</h5>
+                    <p class="card-text">{{ quiz.description }}</p>
+                    <a href="quiz/{{ quiz.id }}" class="btn btn-primary">Запустить квиз</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

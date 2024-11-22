@@ -183,3 +183,9 @@ def create_quiz():
     db.session.commit()
 
     return jsonify({"message": "Quiz created successfully", "quiz_id": quiz.id}), 201
+
+@bp.route('/quiz', methods=['GET'])
+def quiz_list():
+    quiz_list = Quiz.query.all()
+    return render_template('quiz/list.html', quiz_list=quiz_list)
+

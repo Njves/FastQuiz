@@ -219,7 +219,7 @@ def submit_answer():
     return jsonify({
         'message': 'Answer received',
         'result': result,
-        'session_id': quiz_session.id
+        'session_id': quiz_session.id,
         'is_in_time': True
     })
 
