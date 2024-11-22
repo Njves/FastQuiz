@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 import string
 from flask import jsonify, request
@@ -79,7 +79,8 @@ def start_room_quiz():
 
     # Создаем сессию для хоста с привязкой к комнате
     quiz_session = QuizSession(
-        user_id=current_user.id, quiz_id=quiz_id, room_id=room.id)
+        user_id=current_user.id, quiz_id=quiz_id, room_id=room.id, 
+        current_question_end_time=datetime.utcnow() + timedelta(seconds=first_question.duration))
     db.session.add(quiz_session)
     db.session.commit()
 
@@ -90,6 +91,7 @@ def start_room_quiz():
         'session_id': quiz_session.id,
         'count_question': quiz.count_question,
         'number': quiz_session.current_question_index,
+        'duration': first_question.duration,
         'question': {
             'text': first_question.text,
             'answers': answers
@@ -129,6 +131,7 @@ def get_room_quiz_status():
             'session_id': session_id,
             'count_question': quiz.count_question,
             'number': quiz_session_host.current_question_index,
+            'duration': current_question.duration,
             'question': {
                 'text': current_question.text,
                 'answers': answers
@@ -153,6 +156,7 @@ def next_question():
     quiz = Quiz.query.get(quiz_session.quiz_id)
     questions = quiz.questions.all()
     next_question_index = quiz_session.current_question_index + 1
+    quiz_session.current_question_end_time = datetime.utcnow() + timedelta(seconds=current_question.duration)
     if next_question_index < len(questions):
         current_question = questions[next_question_index]
         answers = [{'id': answer.id, 'text': answer.text}
@@ -165,6 +169,7 @@ def next_question():
             'session_id': quiz_session.id,
             'count_question': quiz.count_question,
             'number': quiz_session.current_question_index,
+            'duration': current_question.duration,
             'question': {
                 'text': current_question.text,
                 'answers': answers
@@ -187,7 +192,12 @@ def submit_answer():
         return jsonify({'message': 'Room not found'}), 404
     if not answer:
         return jsonify({'message': 'Answer not found'}), 404
-    
+    if datetime.utcnow() > quiz_session.current_question_end_time:
+        return jsonify({
+        'message': 'Time is up for this question',
+        'session_id': quiz_session.id,
+        'is_in_time': False
+    }), 400
     if answer.is_correct:
         quiz_session.score += 1
         result = 'correct'
@@ -210,6 +220,7 @@ def submit_answer():
         'message': 'Answer received',
         'result': result,
         'session_id': quiz_session.id
+        'is_in_time': True
     })
 
 

@@ -105,6 +105,7 @@ class Quiz(db.Model):
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.String(), nullable=False)
+    duration = db.Column(db.Integer, nullable=False, default=30)  # Длительность в секундах (по умолчанию 30 секунд)
     answers = db.relationship('Answer', backref='question', lazy='dynamic')
 
     def __repr__(self):
@@ -132,6 +133,7 @@ class QuizSession(db.Model):
     current_question_index = db.Column(db.Integer, default=0)
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
     finished_at = db.Column(db.DateTime, default=datetime.utcnow)
+    current_question_end_time = db.Column(db.DateTime)
     room_id = db.Column(db.Integer, db.ForeignKey('quiz_room.id'), nullable=True)
     
     user = db.relationship('User', backref='quiz_sessions')

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import jsonify, render_template, request
 from flask_login import current_user, login_required
@@ -30,7 +30,8 @@ def start_quiz():
     first_question = quiz.questions.all()[0] if quiz.questions else None
     if not first_question:
         return jsonify({'message': 'No questions available for this quiz'}), 404
-    quiz_session = QuizSession(user_id=current_user.id, quiz_id=quiz_id)
+    quiz_session = QuizSession(user_id=current_user.id, quiz_id=quiz_id, 
+                               current_question_end_time=datetime.utcnow() + timedelta(seconds=first_question.duration))
     db.session.add(quiz_session)
     db.session.commit()
     answers = Answer.query.filter_by(question_id=first_question.id).all()
@@ -41,6 +42,7 @@ def start_quiz():
         'session_id': quiz_session.id,
         'count_question': quiz.count_question,
         'number': quiz_session.current_question_index,
+        'duration': first_question.duration,
         'question': {
             'text': first_question.text,
             'answers': answers_list
@@ -65,6 +67,7 @@ def next_question():
         answers = [{'id': answer.id, 'text': answer.text}
                    for answer in current_question.answers]
         quiz_session.current_question_index = next_question_index
+        quiz_session.current_question_end_time = datetime.utcnow() + timedelta(seconds=current_question.duration)
         db.session.commit()
 
         return jsonify({
@@ -72,6 +75,7 @@ def next_question():
             'session_id': quiz_session.id,
             'count_question': quiz.count_question,
             'number': quiz_session.current_question_index,
+            'duration': current_question.duration,
             'question': {
                 'text': current_question.text,
                 'answers': answers
@@ -91,6 +95,16 @@ def submit_answer():
     if not answer:
         return jsonify({'message': 'Answer not found'}), 404
     quiz_session = QuizSession.query.get(session_id)
+    if not quiz_session:
+        return jsonify({'message': 'Quiz session not found'}), 404
+    if datetime.utcnow() > quiz_session.current_question_end_time:
+        return jsonify({
+        'message': 'Time is up for this question',
+        'correct_answer_id': correct_answer.id,
+        'session_id': quiz_session.id,
+        'is_in_time': False
+    }), 400
+
     if answer.is_correct:
         quiz_session.score += 1
     if not current_user.is_guest:
@@ -102,11 +116,14 @@ def submit_answer():
             submitted_at=datetime.utcnow()
         )
         db.session.execute(user_ans)
+
     db.session.commit()
+
     return jsonify({
         'message': 'Answer received',
         'correct_answer_id': correct_answer.id,
-        'session_id': quiz_session.id
+        'session_id': quiz_session.id,
+        'is_in_time': True
     })
 
 
