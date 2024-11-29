@@ -1,33 +1,34 @@
 {% extends 'base.html' %}
+
 {% block content %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
     <title>Create Quiz</title>
 </head>
+
 <body>
     <div class="container mt-5">
-        <h1>Create a New Quiz</h1>
-        <form method="POST">
-            {{ form.hidden_tag() }}
-
+        <h1>Создание новой викторины</h1>
+        <form id="quiz-form">
             <div class="mb-3">
-                {{ form.title.label(class="form-label") }}
-                {{ form.title(class="form-control") }}
+                <label for="title" class="form-label">Название викторины</label>
+                <input type="text" id="title" class="form-control" required>
+                <div class="text-danger" id="title-error"></div>
             </div>
 
             <div class="mb-3">
-                {{ form.description.label(class="form-label") }}
-                {{ form.description(class="form-control") }}
+                <label for="description" class="form-label">Описание викторины</label>
+                <textarea id="description" class="form-control" rows="3" required></textarea>
+                <div class="text-danger" id="description-error"></div>
             </div>
 
-            <div class="mb-3">
-                {{ form.count_question.label(class="form-label") }}
-                {{ form.count_question(class="form-control") }}
-            </div>
+            <h3>Вопросы</h3>
+            <div id="questions-list"></div>
 
             <h3>Questions</h3>
             <div id="questions-list">
@@ -42,7 +43,7 @@
             <button type="button" id="add-question" class="btn btn-secondary">Добавить вопрос</button>
 
             <div class="mt-3">
-                {{ form.submit(class="btn btn-primary") }}
+                <button type="submit" class="btn btn-primary">Создать викторину</button>
             </div>
         </form>
     </div>
@@ -51,20 +52,158 @@
         document.addEventListener('DOMContentLoaded', () => {
             const addQuestionBtn = document.getElementById('add-question');
             const questionsList = document.getElementById('questions-list');
+            let questionIndex = 0;
 
+            // Add new question
             addQuestionBtn.addEventListener('click', () => {
-                const newQuestionIndex = questionsList.children.length;
+                questionIndex++;
                 const questionHTML = `
-                    <div class="mb-3 question-item">
-                        <label for="questions-${newQuestionIndex}-question_text" class="form-label">Question Text</label>
-                        <input type="text" name="questions-${newQuestionIndex}-question_text" id="questions-${newQuestionIndex}-question_text" class="form-control">
+            <div class="mb-3 question-item" id="question-${questionIndex}">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <label for="question-${questionIndex}-text" class="form-label">Текст вопроса</label>
+                        <input type="text" id="question-${questionIndex}-text" class="form-control" required>
                     </div>
-                `;
+                    <button type="button" class="btn btn-danger remove-question" data-question-index="${questionIndex}">Удалить вопрос</button>
+                </div>
+                <h5>Ответы</h5>
+                <div class="answers-list" id="answers-${questionIndex}">
+                    <div class="mb-3 answer-item">
+                        <label for="answer-${questionIndex}-0-text" class="form-label">Ответ</label>
+                        <input type="text" id="answer-${questionIndex}-0-text" class="form-control" required>
+                        <input type="checkbox" id="answer-${questionIndex}-0-correct"> Верный ответ?
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary add-answer" data-question-index="${questionIndex}">Добавить ответ</button>
+            </div>
+        `;
                 questionsList.insertAdjacentHTML('beforeend', questionHTML);
+            });
+
+            // Add answer functionality
+            document.body.addEventListener('click', (event) => {
+                if (event.target.classList.contains('add-answer')) {
+                    const questionIndex = event.target.dataset.questionIndex;
+                    const answersList = document.getElementById(`answers-${questionIndex}`);
+                    const answerIndex = answersList.children.length;
+                    const answerHTML = `
+                <div class="mb-3 answer-item" id="answer-${questionIndex}-${answerIndex}">
+                    <label for="answer-${questionIndex}-${answerIndex}-text" class="form-label">Ответ</label>
+                    <input type="text" id="answer-${questionIndex}-${answerIndex}-text" class="form-control" required>
+                    <input type="checkbox" id="answer-${questionIndex}-${answerIndex}-correct"> Верный ответ?
+                    <button type="button" class="btn btn-danger remove-answer" data-question-index="${questionIndex}" data-answer-index="${answerIndex}">Удалить</button>
+                </div>
+            `;
+                    answersList.insertAdjacentHTML('beforeend', answerHTML);
+                }
+
+                // Remove answer
+                if (event.target.classList.contains('remove-answer')) {
+                    const questionIndex = event.target.dataset.questionIndex;
+                    const answerIndex = event.target.dataset.answerIndex;
+                    const answerItem = document.getElementById(`answer-${questionIndex}-${answerIndex}`);
+                    answerItem.remove();
+                }
+
+                // Remove question
+                if (event.target.classList.contains('remove-question')) {
+                    const questionIndex = event.target.dataset.questionIndex;
+                    const questionItem = document.getElementById(`question-${questionIndex}`);
+                    questionItem.remove();
+                }
+            });
+
+            // Validate and send form data as JSON
+            document.getElementById('quiz-form').addEventListener('submit', (event) => {
+                event.preventDefault();
+                let valid = true;
+
+                const title = document.getElementById('title').value;
+                const description = document.getElementById('description').value;
+
+                if (!title) {
+                    valid = false;
+                    document.getElementById('title-error').textContent = 'Название обязательно';
+                } else {
+                    document.getElementById('title-error').textContent = '';
+                }
+
+                if (!description) {
+                    valid = false;
+                    document.getElementById('description-error').textContent = 'Описание обязательно';
+                } else {
+                    document.getElementById('description-error').textContent = '';
+                }
+
+                const questions = document.querySelectorAll('.question-item');
+                if (questions.length === 0) {
+                    valid = false;
+                    alert('Должен быть хотя бы один вопрос.');
+                    return;
+                }
+
+                const quizData = {
+                    title,
+                    description,
+                    questions: []
+                };
+
+                questions.forEach((question, questionIndex) => {
+                    const questionText = question.querySelector(`#question-${questionIndex + 1}-text`).value;
+                    const answers = [];
+                    const answerItems = question.querySelectorAll('.answer-item');
+
+                    // Validate each question has at least 2 answers and only 1 correct answer
+                    if (answerItems.length < 2) {
+                        valid = false;
+                        alert(`Вопрос ${questionIndex + 1} должен иметь минимум два ответа.`);
+                        return;
+                    }
+
+                    let correctAnswerCount = 0;
+                    answerItems.forEach((answerItem, answerIndex) => {
+                        const answerText = answerItem.querySelector(`input[id^="answer-${questionIndex + 1}-"]:not([type="checkbox"])`).value;
+                        const isCorrect = answerItem.querySelector('input[type="checkbox"]').checked;
+
+                        // Count correct answers
+                        if (isCorrect) correctAnswerCount++;
+
+                        answers.push({ text: answerText, is_correct: isCorrect });
+                    });
+
+                    if (correctAnswerCount !== 1) {
+                        valid = false;
+                        alert(`Вопрос ${questionIndex + 1} должен иметь только один правильный ответ.`);
+                        return;
+                    }
+
+                    quizData.questions.push({ text: questionText, answers });
+                });
+
+                if (valid) {
+                    fetch('/create_quiz', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(quizData)
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.error) {
+                                alert('Ошибка: ' + data.error);
+                            } else {
+                                window.location.href = '/';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Произошла ошибка при создании викторины.');
+                        });
+                }
             });
         });
     </script>
 </body>
-</html>
 
 {% endblock %}

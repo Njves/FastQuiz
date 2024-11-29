@@ -1,129 +1,132 @@
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
+{% extends 'base.html' %}
+{% block content %}
+<style>
+   * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: Arial, sans-serif;
+    }
 
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #f4f4f4;
-        }
+    html {
+        overflow-x: hidden; /* Убираем горизонтальный скролл для всей страницы */
+    }
 
-        .quiz-container {
-            width: 90%;
-            max-width: 600px;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            text-align: center;
-        }
+    .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 60px); /* Высота экрана с учётом навбара */
+        padding: 20px; /* Отступы, чтобы контент не прилипал к краям */
+        background-color: #f4f4f4;
+    }
 
-        .quiz-header h1 {
-            font-size: 24px;
-            color: #333;
-            margin-bottom: 10px;
-        }
+    .quiz-container {
+        width: 100%;
+        max-width: 600px;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        text-align: center;
+    }
 
-        .quiz-header p {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 5px;
-        }
+    .quiz-header h1 {
+        font-size: 24px;
+        color: #333;
+        margin-bottom: 10px;
+    }
 
-        .quiz-header span {
-            font-size: 14px;
-            color: #888;
-            display: block;
-            margin-bottom: 20px;
-        }
+    .quiz-header p {
+        font-size: 16px;
+        color: #666;
+        margin-bottom: 5px;
+    }
 
-        .quiz-body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+    .quiz-header span {
+        font-size: 14px;
+        color: #888;
+        display: block;
+        margin-bottom: 20px;
+    }
 
-        .question-container {
-            margin-bottom: 20px;
-        }
+    .quiz-body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
 
-        .question-container p {
-            font-size: 18px;
-            color: #333;
-        }
+    .question-container {
+        margin-bottom: 20px;
+    }
 
-        .answer-buttons {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            gap: 10px;
-            margin-top: 10px;
-        }
+    .question-container p {
+        font-size: 18px;
+        color: #333;
+    }
 
-        .answer-buttons button {
-            padding: 10px;
-            border: 1px solid #ccc;
-            background-color: #767676;
-            border-radius: 4px;
-            cursor: pointer;
-            align-items: center;
-            transition: background-color 0.3s;
-        }
+    .answer-buttons {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+        margin-top: 10px;
+    }
 
-        .answer-buttons button:hover {
-            background-color: #ffd700;
-        }
+    .answer-buttons button {
+        padding: 10px;
+        border: 1px solid #ccc;
+        background-color: #767676;
+        border-radius: 4px;
+        cursor: pointer;
+        align-items: center;
+        transition: background-color 0.3s;
+    }
 
-        .btn {
-            padding: 10px 20px;
-            background-color: #1c73de;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
+    .answer-buttons button:hover {
+        background-color: #ffd700;
+    }
 
-        .btn:hover {
-            background-color: #45a049;
-        }
+    .btn {
+        padding: 10px 20px;
+        background-color: #1c73de;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+    }
 
-        #next-button {
-            display: none;
-            width: 100%;
-            flex-direction: column;
-            align-items: center;
-        }
-    </style>
-</head>
+    .btn:hover {
+        background-color: #45a049;
+    }
+
+    #next-button {
+        display: none;
+        width: 100%;
+        flex-direction: column;
+        align-items: center;
+    }
+</style>
 
 <body>
-    <div class="quiz-container">
-        <div class="quiz-header">
-            <h1>{{ quiz.title }}</h1>
-            <p>{{ quiz.description }}</p>
-            <span id="question-count">Всего вопросов: {{ quiz.count_question }}</span>
-        </div>
-        <button id="start-button" class="btn" onclick="startQuizRequest({{ quiz.id }})">Start Quiz</button>
-        <div class="quiz-body" id="quiz-body" style="display: none;">
-            <div id="question-container" class="question-container">
-                <p id="question-text"> Здесь будет отображаться вопрос... </p>
-                <div id="answer-buttons" class="answer-buttons"></div>
+    <div class="container">
+        <div class="quiz-container">
+            <div class="quiz-header">
+                <h1>{{ quiz.title }}</h1>
+                <p>{{ quiz.description }}</p>
+                <span id="question-count">Всего вопросов: {{ quiz.count_question }}</span>
             </div>
+            <button id="start-button" class="btn" onclick="startQuizRequest({{ quiz.id }})">Start Quiz</button>
+            <div class="quiz-body" id="quiz-body" style="display: none;">
+                <div id="question-container" class="question-container">
+                    <p id="question-text"> Здесь будет отображаться вопрос... </p>
+                    <div id="answer-buttons" class="answer-buttons"></div>
+                </div>
+            </div>
+            <button id="next-button" class="btn" onclick="nextQuestion()">Следующий вопрос</button>
         </div>
-        <button id="next-button" class="btn" onclick="nextQuestion()">Следующий вопрос</button>
     </div>
-
     <script>
         let sessionID = null;
         let isRequestInProgress = false;
@@ -290,3 +293,4 @@
 </body>
 
 </html>
+{% endblock %}
