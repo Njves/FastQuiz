@@ -15,6 +15,7 @@ def index():
     quiz_list = Quiz.query.all()
     return render_template('quiz/list.html', quiz_list=quiz_list, current_user=current_user)
 
+
 @bp.route('/quiz/<int:quiz_id>')
 @login_required
 def quiz(quiz_id):
@@ -22,6 +23,7 @@ def quiz(quiz_id):
     if not quiz:
         return jsonify({'message': 'Quiz not found'}), 404
     return render_template('quiz/quiz.html', quiz=quiz)
+
 
 @bp.route('/start_quiz', methods=['POST'])
 @login_required
@@ -34,7 +36,7 @@ def start_quiz():
     first_question = quiz.questions.all()[0] if quiz.questions else None
     if not first_question:
         return jsonify({'message': 'No questions available for this quiz'}), 404
-    quiz_session = QuizSession(user_id=current_user.id, quiz_id=quiz_id, 
+    quiz_session = QuizSession(user_id=current_user.id, quiz_id=quiz_id,
                                current_question_end_time=datetime.utcnow() + timedelta(seconds=first_question.duration))
     db.session.add(quiz_session)
     db.session.commit()
@@ -71,7 +73,8 @@ def next_question():
         answers = [{'id': answer.id, 'text': answer.text}
                    for answer in current_question.answers]
         quiz_session.current_question_index = next_question_index
-        quiz_session.current_question_end_time = datetime.utcnow() + timedelta(seconds=current_question.duration)
+        quiz_session.current_question_end_time = datetime.utcnow(
+        ) + timedelta(seconds=current_question.duration)
         db.session.commit()
 
         return jsonify({
@@ -95,7 +98,8 @@ def submit_answer():
     session_id = request.json.get('session_id')
 
     answer = Answer.query.get(answer_id)
-    correct_answer = Answer.query.filter_by(question_id=answer.question_id, is_correct=True).first()
+    correct_answer = Answer.query.filter_by(
+        question_id=answer.question_id, is_correct=True).first()
     if not answer:
         return jsonify({'message': 'Answer not found'}), 404
     quiz_session = QuizSession.query.get(session_id)
@@ -103,11 +107,11 @@ def submit_answer():
         return jsonify({'message': 'Quiz session not found'}), 404
     if datetime.utcnow() > quiz_session.current_question_end_time:
         return jsonify({
-        'message': 'Time is up for this question',
-        'correct_answer_id': correct_answer.id,
-        'session_id': quiz_session.id,
-        'is_in_time': False
-    }), 400
+            'message': 'Time is up for this question',
+            'correct_answer_id': correct_answer.id,
+            'session_id': quiz_session.id,
+            'is_in_time': False
+        }), 400
 
     if answer.is_correct:
         quiz_session.score += 1
@@ -144,7 +148,7 @@ def finish_quiz():
                                             quiz_id=quiz_session.quiz_id, score=final_score)
         db.session.execute(record)
     db.session.delete(quiz_session)
-    db.session.commit() 
+    db.session.commit()
     return jsonify({'score': final_score, 'message': 'Quiz finished'})
 
 
@@ -158,10 +162,10 @@ def create_quiz():
     if not title or not description or not questions_data:
         return jsonify({"error": "Missing required fields"}), 400
     quiz = Quiz(
-            title=title,
-            description=description,
-            count_question=len(questions_data)
-        )
+        title=title,
+        description=description,
+        count_question=len(questions_data)
+    )
     db.session.add(quiz)
     for question_data in questions_data:
         question_text = question_data.get('text')
@@ -179,7 +183,7 @@ def create_quiz():
             if not answer_text:
                 return jsonify({"error": "Each answer must have text"}), 400
             answer = Answer(
-                 text=answer_text,
+                text=answer_text,
                 is_correct=is_correct
             )
             question.answers.append(answer)
@@ -188,7 +192,16 @@ def create_quiz():
 
     return jsonify({"message": "Quiz created successfully", "quiz_id": quiz.id}), 201
 
+
 @bp.route('/create', methods=['GET', 'POST'])
 @login_required
 def create_quiz_form():
     return render_template('quiz/create.html')
+
+bp.route('/profile')
+@login_required
+def profile():
+    user = current_user
+    quizzes_created = user.quizzes_created.all()
+    quiz_sessions = QuizSession.query.filter_by(user_id=user.id).all()
+    return render_template('profile.html', user=user, quizzes_created=quizzes_created, quiz_sessions=quiz_sessions)
