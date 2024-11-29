@@ -25,6 +25,7 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
     migrate.init_app(app, db, render_as_batch=True)
     login_manager.init_app(app)
+    login_manager.login_view = 'auth.login'
     db.init_app(app)
     admin_app.init_app(app)
     from app.main import bp as main_bp

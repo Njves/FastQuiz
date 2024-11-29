@@ -1,6 +1,6 @@
 import random
 
-from flask import jsonify
+from flask import jsonify, redirect, render_template, url_for
 from flask import request
 from flask_login import login_user, logout_user, login_required
 
@@ -42,6 +42,7 @@ def guest_auth():
             username = f'guest_{user.id}_{counter}'
         user.username = username
         db.session.commit()
+    login_user(user, remember=True)
     return jsonify({
         'token': user.token,
         'username': user.username,
@@ -64,10 +65,9 @@ def register():
     )
     user.set_password(password)
     user.generate_token()
-    login_user(user, remember=True)
     db.session.add(user)
     db.session.commit()
-
+    login_user(user, remember=True)
     return jsonify({'message': 'User registered successfully', 'token': user.token}), 201
 
 
@@ -85,9 +85,12 @@ def login():
     login_user(user, remember=True)
     return jsonify({'message': 'Login successful', 'token': user.token}), 200
 
+@bp.route('/login')
+def login_page():
+    return render_template('auth/login.html')
 
 @bp.route("/logout")
 @login_required
 def logout():
     logout_user()
-    return jsonify({'message': 'Logout successful'}), 200
+    return render_template('auth/login.html')

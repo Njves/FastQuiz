@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from flask import jsonify, render_template, request, flash, redirect, url_for
 from flask_login import current_user, login_required
 
-from app.main.forms.forms import QuizForm
 from app.models import Quiz, Question, Answer, User, QuizSession, quiz_score, user_answer
 
 from app import db
@@ -11,10 +10,13 @@ from app.main import bp
 
 
 @bp.route('/', methods=['GET'])
+@login_required
 def index():
-    return render_template('base.html')
+    quiz_list = Quiz.query.all()
+    return render_template('quiz/list.html', quiz_list=quiz_list, current_user=current_user)
 
 @bp.route('/quiz/<int:quiz_id>')
+@login_required
 def quiz(quiz_id):
     quiz = Quiz.query.get(quiz_id)
     if not quiz:
@@ -186,36 +188,7 @@ def create_quiz():
 
     return jsonify({"message": "Quiz created successfully", "quiz_id": quiz.id}), 201
 
-@bp.route('/quiz', methods=['GET'])
-def quiz_list():
-    quiz_list = Quiz.query.all()
-    return render_template('quiz/list.html', quiz_list=quiz_list)
-
 @bp.route('/create', methods=['GET', 'POST'])
+@login_required
 def create_quiz_form():
-    form = QuizForm()
-
-    if form.validate_on_submit():
-        # Создание нового объекта Quiz
-        new_quiz = Quiz(
-            title=form.title.data,
-            description=form.description.data,
-            count_question=form.count_question.data,
-        )
-        db.session.add(new_quiz)
-        db.session.commit()
-
-        # Обработка вопросов
-        for question_form in form.questions.entries:
-            question_text = question_form.data['question_text']
-            # Логика сохранения вопроса, например:
-            # question = Question(text=question_text, quiz_id=new_quiz.id)
-            # db.session.add(question)
-
-        db.session.commit()
-
-        flash('Quiz created successfully!', 'success')
-        return redirect(url_for('create_quiz'))
-
-    return render_template('quiz/create.html', form=form)
-
+    return render_template('quiz/create.html')
