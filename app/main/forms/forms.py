@@ -6,8 +6,8 @@ class QuestionForm(FlaskForm):
     question_text = StringField('Question Text', validators=[DataRequired()])
 
 class QuizForm(FlaskForm):
-    title = StringField('Quiz Title', validators=[DataRequired()])
-    description = TextAreaField('Description', validators=[DataRequired()])
-    count_question = IntegerField('Number of Questions', validators=[DataRequired()])
+    title = StringField('Название', validators=[DataRequired()])
+    description = TextAreaField('Описание', validators=[DataRequired()])
+    count_question = IntegerField('Количество вопросов', validators=[DataRequired()])
     questions = FieldList(FormField(QuestionForm), min_entries=1)
-    submit = SubmitField('Create Quiz')
+    submit = SubmitField('Создать')
