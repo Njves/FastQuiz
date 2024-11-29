@@ -30,16 +30,6 @@
             <h3>Вопросы</h3>
             <div id="questions-list"></div>
 
-            <h3>Questions</h3>
-            <div id="questions-list">
-                {% for question_form in form.questions %}
-                    <div class="mb-3 question-item">
-                        {{ question_form.question_text.label(class="form-label") }}
-                        {{ question_form.question_text(class="form-control") }}
-                    </div>
-                {% endfor %}
-            </div>
-
             <button type="button" id="add-question" class="btn btn-secondary">Добавить вопрос</button>
 
             <div class="mt-3">
