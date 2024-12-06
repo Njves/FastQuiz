@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+h1, h2 {
+    text-align: center;
+    color: #2c3e50;
+}
+
+.styled-table {
+    border-collapse: collapse;
+    margin: 20px auto;
+    font-size: 18px;
+    width: 80%;
+    text-align: left;
+    background-color: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.styled-table thead tr {
+    background-color: #2980b9;
+    color: #ffffff;
+    text-align: left;
+}
+
+.styled-table th, .styled-table td {
+    padding: 12px 15px;
+}
+
+.styled-table tbody tr {
+    border-bottom: 1px solid #dddddd;
+}
+
+.styled-table tbody tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+
+.styled-table tbody tr:last-of-type {
+    border-bottom: 2px solid #2980b9;
+}
+
+.styled-table tbody tr:hover {
+    background-color: #d3e9f9;
+}
+</style>
+
+<body>
+    <h1>Добро пожаловать, {{ user.username }}</h1>
+
+    <!-- Таблица созданных квизов -->
+    <h2>Созданные квизы</h2>
+    {% if quizzes_created %}
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Описание</th>
+                    <th>Кол-во вопросов</th>
+                    <th>Дата создания</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for quiz in quizzes_created %}
+                <tr>
+                    <td>{{ quiz.title }}</td>
+                    <td>{{ quiz.description }}</td>
+                    <td>{{ quiz.count_question }}</td>
+                    <td>{{ quiz.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Ты еще не создавал квизы.</p>
+    {% endif %}
+
+    <!-- Таблица результатов квизов -->
+    <h2>Результаты квизов</h2>
+    {% if results %}
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>ID квиза</th>
+                    <th>Название квиза</th>
+                    <th>Результат</th>
+                    <th>Максимальный результат</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results %}
+                <tr>
+                    <td>{{ result[2] }}</td>
+                    <td>{{ result[0] }}</td>
+                    <td>{{ result[1] }}</td>
+                    <td>{{ result[3] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Ты еще не прошел ни один квиз.</p>
+    {% endif %}
+</body>
+{% endblock %}

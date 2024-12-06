@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <style>
-   * {
+    * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
@@ -9,15 +9,18 @@
     }
 
     html {
-        overflow-x: hidden; /* Убираем горизонтальный скролл для всей страницы */
+        overflow-x: hidden;
+        /* Убираем горизонтальный скролл для всей страницы */
     }
 
     .container {
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: calc(100vh - 60px); /* Высота экрана с учётом навбара */
-        padding: 20px; /* Отступы, чтобы контент не прилипал к краям */
+        min-height: calc(100vh - 60px);
+        /* Высота экрана с учётом навбара */
+        padding: 20px;
+        /* Отступы, чтобы контент не прилипал к краям */
         background-color: #f4f4f4;
     }
 
@@ -85,6 +88,7 @@
 
     .answer-buttons button:hover {
         background-color: #ffd700;
+        color: white;
     }
 
     .btn {
@@ -107,9 +111,23 @@
         flex-direction: column;
         align-items: center;
     }
+
+    #time-up-message {
+        display: none;
+        color: red;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    #timer {
+        display: none;
+        font-size: 18px;
+        margin-top: 10px;
+        color: #333;
+    }
 </style>
 
-<body>
+<body style="display: none;">
     <div class="container">
         <div class="quiz-container">
             <div class="quiz-header">
@@ -117,10 +135,14 @@
                 <p>{{ quiz.description }}</p>
                 <span id="question-count">Всего вопросов: {{ quiz.count_question }}</span>
             </div>
-            <button id="start-button" class="btn" onclick="startQuizRequest({{ quiz.id }})">Start Quiz</button>
+            <div id="timer"></div>
+            <button id="start-button" class="btn" onclick="startQuizRequest({{ quiz.id }})">Начать квиз</button>
             <div class="quiz-body" id="quiz-body" style="display: none;">
                 <div id="question-container" class="question-container">
-                    <p id="question-text"> Здесь будет отображаться вопрос... </p>
+                    <p id="question-text"></p>
+                    <div id="time-up-message">
+                        Вы не успели ответить на вопрос!
+                    </div>
                     <div id="answer-buttons" class="answer-buttons"></div>
                 </div>
             </div>
@@ -128,10 +150,19 @@
         </div>
     </div>
     <script>
-        let sessionID = null;
+        function getQuizIdFromUrl() {
+            const path = window.location.pathname;
+            const segments = path.split('/');
+            const quizId = segments[2];
+            return quizId ? parseInt(quizId, 10) : null;
+        }
+        let questionDuration = 0;
+        let remainingTime = 0;
+        let timerInterval;
+        let quizId = getQuizIdFromUrl();
+        let sessionID = localStorage.getItem('sessionID_' + quizId);
         let isRequestInProgress = false;
-        const token = localStorage.getItem('token');
-        console.log(token)
+        const token = localStorage.getItem('auth_token');
         function startQuizRequest(quiz_id) {
             if (isRequestInProgress) return;
             isRequestInProgress = true;
@@ -148,6 +179,7 @@
                     if (data.message === 'Quiz started') {
                         isRequestInProgress = false;
                         sessionID = data.session_id;
+                        localStorage.setItem('sessionID_' + quizId, sessionID);
                         document.getElementById('start-button').style.display = 'none';
                         document.getElementById('quiz-body').style.display = 'block';
                         loadQuestion(data);
@@ -164,6 +196,8 @@
 
         function loadQuestion(data) {
             questionData = data.question
+            questionDuration = data.duration;
+            remainingTime = questionDuration
             document.getElementById('question-text').innerText = questionData.text;
             document.getElementById('question-count').innerText = `Вопрос ${data.number + 1} из ${data.count_question}`;
 
@@ -180,9 +214,11 @@
                 button.onclick = () => submitAnswer(answer.id);
                 answersContainer.appendChild(button);
             });
+            document.getElementById('time-up-message').style.display = 'none';
+            startTimer();
         }
 
-        function submitAnswer(answerID) {
+        function submitAnswer(answerID, timerNotEnd = true) {
             if (isRequestInProgress) return; // Предотвращаем повторный запрос
             isRequestInProgress = true;
             fetch('/submit_answer', {
@@ -191,13 +227,14 @@
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ answer_id: answerID, session_id: sessionID })
+                body: JSON.stringify({ answer_id: answerID, session_id: sessionID, is_in_time: timerNotEnd})
             })
                 .then(response => response.json())
                 .then(data => {
                     isRequestInProgress = false;
                     if (data.message === 'Answer received') {
-                        highlightAnswers(data.correct_answer_id, answerID);
+                        localStorage.setItem('answerID', answerID);
+                        highlightAnswers(data.correct_answer_id, data.is_in_time);
                     } else {
                         console.error(data.message);
                     }
@@ -208,13 +245,16 @@
                 })
         }
 
-        function highlightAnswers(correctAnswerID, userAnswerID) {
+        function highlightAnswers(correctAnswerID, isInTime) {
             const answerButtons = document.querySelectorAll('#answer-buttons .btn');
+            let userAnswerID = localStorage.getItem('answerID')
+            if (!isInTime) {
+                document.getElementById('time-up-message').style.display = 'block';
+            }
             answerButtons.forEach(button => {
                 const buttonAnswerID = parseInt(button.getAttribute('data-id'));
                 const isCorrect = buttonAnswerID === correctAnswerID;
-                const isUserAnswer = buttonAnswerID === userAnswerID
-                console.log(isCorrect, typeof (userAnswerID), typeof (correctAnswerID), button)
+                const isUserAnswer = buttonAnswerID == userAnswerID
                 if (isCorrect) {
                     button.style.backgroundColor = '#4CAF50';  // Green for correct answer
                 } else if (isUserAnswer) {
@@ -223,8 +263,6 @@
                     button.style.backgroundColor = '#767676';  // Default for unselected answers
                 }
             });
-
-            // Show the "Next Question" button after highlighting answers
             document.getElementById('next-button').style.display = 'flex';
         }
 
@@ -281,13 +319,71 @@
                     <div class="quiz-header">
                         <h1>Результаты викторины</h1>
                         <p>Ваш результат: ${score} из ${totalQuestions}</p>
+                        <button class="btn" onclick="restartQuiz()">Пройти квиз снова</button>
                     </div>
                 `;
+                        localStorage.removeItem('sessionID_' + quizId);
                     } else {
                         console.error(data.message);
                     }
                 })
                 .catch(error => console.error('Error finishing quiz:', error));
+            document.getElementById('time-up-message').style.display = 'none';
+        }
+        window.addEventListener('load', () => {
+            if (sessionID) {
+                console.log('Found quiz session ID:', sessionID);
+                fetch(`/quiz_state/${sessionID}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            console.error('Error fetching quiz state:', data.error);
+                            localStorage.removeItem('sessionID_' + quizId);
+                        } else {
+                            console.log('Quiz state loaded:', data);
+                            restoreQuizState(data); // Функция для восстановления состояния
+                            document.body.style.display = 'block'
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching quiz state:', error);
+                    });
+            } else {
+                console.log('No quiz session found. Starting a new quiz.');
+                document.body.style.display = 'block'
+            }
+        });
+        function restoreQuizState(data) {
+            document.getElementById('start-button').style.display = 'none';
+            document.getElementById('quiz-body').style.display = 'block';
+            loadQuestion(data);
+            if (data.message === 'Answer already submitted') {
+                document.getElementById('timer').style.display = 'none'
+                highlightAnswers(data.correct_answer_id, data.is_in_time);
+                document.getElementById('next-button').style.display = 'flex';
+                return;
+            }
+            remainingTime = Math.floor(data.remaining_time);
+            clearInterval(timerInterval);
+            startTimer();
+            document.getElementById('next-button').style.display = 'none';
+        }
+        function restartQuiz() {
+            localStorage.removeItem('sessionID_' + quizId);
+            location.reload();
+        }
+        function startTimer() {
+            document.getElementById('timer').style.display = 'block';
+            const answerButtons = document.querySelectorAll('#answer-buttons .btn');
+            timerInterval = setInterval(() => {
+                remainingTime--;
+                document.getElementById('timer').innerText = `Оставшееся время: ${remainingTime} секунд`;
+
+                if (remainingTime <= 0) {
+                    clearInterval(timerInterval);
+                    submitAnswer(parseInt(answerButtons[0].getAttribute('data-id')), false)
+                }
+            }, 1000);
         }
     </script>
 </body>

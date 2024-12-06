@@ -135,6 +135,7 @@ class QuizSession(db.Model):
     finished_at = db.Column(db.DateTime, default=datetime.utcnow)
     current_question_end_time = db.Column(db.DateTime)
     room_id = db.Column(db.Integer, db.ForeignKey('quiz_room.id'), nullable=True)
+    is_current_question_answered = db.Column(db.Boolean, default=False)
     
     user = db.relationship('User', backref='quiz_sessions')
     quiz = db.relationship('Quiz', backref='sessions')
