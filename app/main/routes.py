@@ -257,12 +257,25 @@ def create_quiz_form():
 @login_required
 def profile():
     user = current_user
+    # Получение созданных квизов
     quizzes_created = user.quizzes_created.all()
+
+    # Получение результатов квизов с ID и количеством вопросов
     results = db.session.execute(
-        db.select(Quiz.title, quiz_score.c.score)
+        db.select(
+            Quiz.title,         # Название квиза
+            quiz_score.c.score, # Набранный результат
+            Quiz.id,            # ID квиза
+            Quiz.count_question # Количество вопросов
+        )
         .join(quiz_score, quiz_score.c.quiz_id == Quiz.id)
         .filter(quiz_score.c.user_id == user.id)
     ).all()
+
+    # Рендеринг шаблона с новыми данными
     return render_template(
-        'profile/profile.html', user=user, quizzes_created=quizzes_created, results=results
+        'profile/profile.html',
+        user=user,
+        quizzes_created=quizzes_created,
+        results=results
     )
