@@ -160,12 +160,17 @@ def submit_answer():
     answer = Answer.query.get(answer_id)
     if not answer:
         return jsonify({'message': 'Answer not found'}), 404
+
     correct_answer = Answer.query.filter_by(
         question_id=answer.question_id, is_correct=True).first()
-    quiz_session.is_current_question_answered = True
+    
     if datetime.utcnow() > quiz_session.current_question_end_time:
         is_in_time = False
-
+    if quiz_session.is_current_question_answered:
+         return jsonify({
+        'message': 'Answer already submitted',
+    })
+    quiz_session.is_current_question_answered = True
     if answer.is_correct and is_in_time:
         quiz_session.score += 1
     answer_id = answer_id if is_in_time else 0

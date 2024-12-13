@@ -162,6 +162,7 @@
         let quizId = getQuizIdFromUrl();
         let sessionID = localStorage.getItem('sessionID_' + quizId);
         let isRequestInProgress = false;
+        let isAnswerSubmitted = false;
         const token = localStorage.getItem('auth_token');
         function startQuizRequest(quiz_id) {
             if (isRequestInProgress) return;
@@ -219,15 +220,18 @@
         }
 
         function submitAnswer(answerID, timerNotEnd = true) {
-            if (isRequestInProgress) return; // Предотвращаем повторный запрос
+            if (isRequestInProgress || isAnswerSubmitted) return; // Предотвращаем повторный запрос
             isRequestInProgress = true;
+            isAnswerSubmitted = true;
+            clearInterval(timerInterval);
+            document.getElementById('timer').style.display = 'none'; // Скрыть таймер
             fetch('/submit_answer', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ answer_id: answerID, session_id: sessionID, is_in_time: timerNotEnd})
+                body: JSON.stringify({ answer_id: answerID, session_id: sessionID, is_in_time: timerNotEnd })
             })
                 .then(response => response.json())
                 .then(data => {
@@ -269,6 +273,7 @@
         function nextQuestion() {
             if (isRequestInProgress) return; // Предотвращаем повторный запрос
             isRequestInProgress = true;
+            isAnswerSubmitted = false;
             if (!sessionID) {
                 console.error('Session ID is missing.');
                 return;
@@ -359,6 +364,7 @@
             loadQuestion(data);
             if (data.message === 'Answer already submitted') {
                 document.getElementById('timer').style.display = 'none'
+                isAnswerSubmitted = true;
                 highlightAnswers(data.correct_answer_id, data.is_in_time);
                 document.getElementById('next-button').style.display = 'flex';
                 return;
