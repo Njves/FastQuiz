@@ -6,6 +6,7 @@ from app import create_app, db
 from app.models import Answer, Question, Quiz, User
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 
 @pytest.fixture(scope="module")
 def test_app():
@@ -109,3 +110,14 @@ def prepare_data(test_app, create_user, simple_quiz):
         user = create_user("testuser", "password123")
         quiz_data = simple_quiz
         return {"user": user, "quiz_id": quiz_data["quiz_id"]}
+    
+@pytest.fixture
+def login_for_test(selenium_driver, live_server, base_url, prepare_data):
+    selenium_driver.get(f"{base_url}/login")
+    assert "login" in selenium_driver.current_url
+    username_field = selenium_driver.find_element(By.NAME, "username")
+    password_field = selenium_driver.find_element(By.NAME, "password")
+    login_button = selenium_driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+    username_field.send_keys("testuser")  # Replace with valid username
+    password_field.send_keys("password123")  # Replace with valid password
+    login_button.click()
