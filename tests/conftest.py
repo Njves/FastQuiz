@@ -66,11 +66,11 @@ def simple_quiz(test_app):
         )
         question1 = Question(
             text="What is the capital of France?",
-            duration=30
+            duration=3
         )
         question2 = Question(
             text="What is 2 + 2?",
-            duration=20
+            duration=3
         )
         answer1 = Answer(text="Paris", is_correct=True)
         answer2 = Answer(text="London", is_correct=False)

@@ -215,8 +215,8 @@
                 button.onclick = () => submitAnswer(answer.id);
                 answersContainer.appendChild(button);
             });
-            document.getElementById('time-up-message').style.display = 'none';
             startTimer();
+            document.getElementById('time-up-message').style.display = 'none';
         }
 
         function submitAnswer(answerID, timerNotEnd = true) {
@@ -379,12 +379,11 @@
             location.reload();
         }
         function startTimer() {
-            document.getElementById('timer').style.display = 'block';
             const answerButtons = document.querySelectorAll('#answer-buttons .btn');
             timerInterval = setInterval(() => {
                 remainingTime--;
                 document.getElementById('timer').innerText = `Оставшееся время: ${remainingTime} секунд`;
-
+                document.getElementById('timer').style.display = 'block';
                 if (remainingTime <= 0) {
                     clearInterval(timerInterval);
                     submitAnswer(parseInt(answerButtons[0].getAttribute('data-id')), false)
