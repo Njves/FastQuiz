@@ -163,13 +163,13 @@ def submit_answer():
 
     correct_answer = Answer.query.filter_by(
         question_id=answer.question_id, is_correct=True).first()
-    
-    if datetime.utcnow() > quiz_session.current_question_end_time:
+
+    if datetime.utcnow() > quiz_session.current_question_end_time + timedelta(seconds=1):
         is_in_time = False
     if quiz_session.is_current_question_answered:
-         return jsonify({
-        'message': 'Answer already submitted',
-    })
+        return jsonify({
+            'message': 'Answer already submitted',
+        })
     quiz_session.is_current_question_answered = True
     if answer.is_correct and is_in_time:
         quiz_session.score += 1
@@ -228,12 +228,13 @@ def create_quiz():
     db.session.add(quiz)
     for question_data in questions_data:
         question_text = question_data.get('text')
+        question_time = question_data.get('duration')
         answers_data = question_data.get('answers')
 
-        if not question_text or not answers_data:
+        if not question_text or not answers_data or not question_time:
             return jsonify({"error": "Each question must have text and answers"}), 400
 
-        question = Question(text=question_text)
+        question = Question(text=question_text, duration=question_time)
         quiz.questions.append(question)
 
         for answer_data in answers_data:
@@ -269,9 +270,9 @@ def profile():
     results = db.session.execute(
         db.select(
             Quiz.title,         # Название квиза
-            quiz_score.c.score, # Набранный результат
+            quiz_score.c.score,  # Набранный результат
             Quiz.id,            # ID квиза
-            Quiz.count_question # Количество вопросов
+            Quiz.count_question  # Количество вопросов
         )
         .join(quiz_score, quiz_score.c.quiz_id == Quiz.id)
         .filter(quiz_score.c.user_id == user.id)

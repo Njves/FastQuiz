@@ -56,6 +56,10 @@
                     </div>
                     <button type="button" class="btn btn-danger remove-question" data-question-index="${questionIndex}">Удалить вопрос</button>
                 </div>
+                <div class="mb-3">
+                    <label for="question-${questionIndex}-duration" class="form-label">Длительность (секунды)</label>
+                    <input type="number" id="question-${questionIndex}-duration" class="form-control" value="30" min="10" required>
+                </div>
                 <h5>Ответы</h5>
                 <div class="answers-list" id="answers-${questionIndex}">
                     <div class="mb-3 answer-item">
@@ -142,7 +146,12 @@
                     const questionText = question.querySelector(`#question-${questionIndex + 1}-text`).value;
                     const answers = [];
                     const answerItems = question.querySelectorAll('.answer-item');
-
+                    const duration = parseInt(question.querySelector(`#question-${questionIndex + 1}-duration`).value, 10);
+                    if (duration < 10) {
+                        valid = false;
+                        alert(`Минимальная длительность для вопроса ${index + 1} - 10 секунд.`);
+                        return;
+                    }
                     // Validate each question has at least 2 answers and only 1 correct answer
                     if (answerItems.length < 2) {
                         valid = false;
@@ -167,7 +176,7 @@
                         return;
                     }
 
-                    quizData.questions.push({ text: questionText, answers });
+                    quizData.questions.push({ text: questionText, answers, duration: duration});
                 });
 
                 if (valid) {
