@@ -285,3 +285,18 @@ def profile():
         quizzes_created=quizzes_created,
         results=results
     )
+
+@bp.route('/delete_quiz/<int:quiz_id>', methods=['DELETE'])
+@login_required
+def delete_quiz(quiz_id):
+    quiz = Quiz.query.get(quiz_id)
+    print(quiz.creators)
+    if current_user in quiz.creators:
+        if quiz:
+            db.session.delete(quiz)
+            db.session.commit()
+            return jsonify({"success": True}), 200
+        else:
+            return jsonify({"error": "Quiz not found"}), 404
+    else:
+            return jsonify({"error": "You not creator"}), 404

@@ -65,6 +65,7 @@ h1, h2 {
                     <th>Описание</th>
                     <th>Кол-во вопросов</th>
                     <th>Дата создания</th>
+                    <th>Удаление</th>
                 </tr>
             </thead>
             <tbody>
@@ -74,6 +75,9 @@ h1, h2 {
                     <td>{{ quiz.description }}</td>
                     <td>{{ quiz.count_question }}</td>
                     <td>{{ quiz.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        <button class="btn-delete" data-quiz-id="{{ quiz.id }}">Удалить</button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -109,4 +113,34 @@ h1, h2 {
         <p>Ты еще не прошел ни один квиз.</p>
     {% endif %}
 </body>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.btn-delete').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const quizId = event.target.dataset.quizId;
+                const confirmDelete = confirm("Вы уверены, что хотите удалить этот квиз?");
+                if (confirmDelete) {
+                    fetch(`/delete_quiz/${quizId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            location.reload();
+                        } else {
+                            alert('Ошибка при удалении квиза');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка:', error);
+                        alert('Произошла ошибка при удалении квиза.');
+                    });
+                }
+            });
+        });
+    });
+</script>
+
 {% endblock %}
