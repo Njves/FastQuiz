@@ -12,8 +12,25 @@ from app.main import bp
 @bp.route('/', methods=['GET'])
 @login_required
 def index():
-    quiz_list = Quiz.query.all()
-    return render_template('quiz/list.html', quiz_list=quiz_list, current_user=current_user)
+    page = request.args.get('page', 1, type=int) 
+    per_page = 3
+    pagination = Quiz.query.filter_by(is_archived=False).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    if page > pagination.pages:
+        return redirect(url_for('main.index', page=pagination.pages))    
+    quiz_list = pagination.items
+    next_url = url_for('main.index', page=pagination.next_num) \
+        if pagination.has_next else None
+    prev_url = url_for('main.index', page=pagination.prev_num) \
+        if pagination.has_prev else None
+    return render_template('quiz/list.html', 
+                           quiz_list=quiz_list, 
+                           pagination=pagination, 
+                           current_user=current_user,
+                           page=page, 
+                           next_url=next_url, 
+                           prev_url=prev_url)
 
 
 @bp.route('/quiz/<int:quiz_id>')
@@ -43,8 +60,9 @@ def get_quiz_state(session_id):
             'score': quiz_session.score
         })
     current_question = questions[current_index]
+    question_type = current_question.question_type
     answers = [{'id': answer.id, 'text': answer.text}
-               for answer in current_question.answers]
+               for answer in current_question.answers] if question_type == 'choice' else []
     remaining_time = max(
         (quiz_session.current_question_end_time -
          datetime.utcnow()).total_seconds(), 0
@@ -63,6 +81,7 @@ def get_quiz_state(session_id):
             'is_correct': quiz_session.is_current_question_answered,
             'question': {
                 'text': current_question.text,
+                'type': question_type,
                 'answers': answers
             }
         })
@@ -76,6 +95,7 @@ def get_quiz_state(session_id):
         'duration': current_question.duration,
         'question': {
             'text': current_question.text,
+            'type': question_type,
             'answers': answers
         }
     })
@@ -97,6 +117,7 @@ def start_quiz():
     db.session.add(quiz_session)
     db.session.commit()
     answers = Answer.query.filter_by(question_id=first_question.id).all()
+    answers = answers if first_question.question_type == 'choice' else []
     answers_list = [{'id': answer.id, 'text': answer.text}
                     for answer in answers]
     return jsonify({
@@ -107,6 +128,7 @@ def start_quiz():
         'duration': first_question.duration,
         'question': {
             'text': first_question.text,
+            'type': first_question.question_type,
             'answers': answers_list
         }
     })
@@ -129,6 +151,7 @@ def next_question():
         current_question = questions[next_question_index]
         answers = [{'id': answer.id, 'text': answer.text}
                    for answer in current_question.answers]
+        answers = answers if current_question.question_type == 'choice' else []
         quiz_session.current_question_index = next_question_index
         quiz_session.current_question_end_time = datetime.utcnow(
         ) + timedelta(seconds=current_question.duration)
@@ -142,6 +165,7 @@ def next_question():
             'duration': current_question.duration,
             'question': {
                 'text': current_question.text,
+                'type': current_question.question_type,
                 'answers': answers
             }
         })
@@ -151,35 +175,49 @@ def next_question():
 @bp.route('/submit_answer', methods=['POST'])
 @login_required
 def submit_answer():
-    answer_id = request.json.get('answer_id')
     session_id = request.json.get('session_id')
-    is_in_time = request.json.get('is_in_time')
     quiz_session = QuizSession.query.get(session_id)
+    correct_answer_id = None
+    correct_answer = None
     if not quiz_session:
         return jsonify({'message': 'Quiz session not found'}), 404
-    answer = Answer.query.get(answer_id)
-    if not answer:
-        return jsonify({'message': 'Answer not found'}), 404
+    question = Quiz.query.get(quiz_session.quiz_id).questions.all()[quiz_session.current_question_index]
+    if not question:
+        return jsonify({'message': 'Question not found'}), 404
 
-    correct_answer = Answer.query.filter_by(
-        question_id=answer.question_id, is_correct=True).first()
+    is_in_time = request.json.get('is_in_time', True)
 
     if datetime.utcnow() > quiz_session.current_question_end_time + timedelta(seconds=1):
         is_in_time = False
+
     if quiz_session.is_current_question_answered:
-        return jsonify({
-            'message': 'Answer already submitted',
-        })
+        return jsonify({'message': 'Answer already submitted'}), 400
+
     quiz_session.is_current_question_answered = True
-    if answer.is_correct and is_in_time:
-        quiz_session.score += 1
-    answer_id = answer_id if is_in_time else 0
+    if question.question_type == "text":
+        text_answer = request.json.get('text_answer', '').strip()
+        if not text_answer:
+            return jsonify({'message': 'Answer cannot be empty'}), 400
+        correct_answer = question.answers[0]
+        is_correct = True if correct_answer.lower() == text_answer.lower() else False
+        
+    else:
+        answer_id = request.json.get('answer_id')
+        answer = Answer.query.get(answer_id)
+        correct_answer_id = Answer.query.filter_by(question_id=answer.question_id, is_correct=True).first().id
+        if not answer:
+            return jsonify({'message': 'Answer not found'}), 404
+        is_correct = answer.is_correct if is_in_time else False
+        if answer.is_correct and is_in_time:
+            quiz_session.score += 1
+    # Запись в бд перепроверить позже
     if not current_user.is_guest:
         user_ans = user_answer.insert().values(
             user_id=current_user.id,
-            question_id=answer.question_id,
-            answer_id=answer_id,
-            is_correct=answer.is_correct,
+            question_id=question.id,
+            answer_id=answer_id if question.question_type == "choice" else None,
+            text_answer=text_answer if question.question_type == "text" else None,
+            is_correct=is_correct,
             submitted_at=datetime.utcnow()
         )
         db.session.execute(user_ans)
@@ -188,7 +226,8 @@ def submit_answer():
 
     return jsonify({
         'message': 'Answer received',
-        'correct_answer_id': correct_answer.id,
+        'correct_answer_id': correct_answer_id,
+        'correct_answer': correct_answer_id,
         'session_id': quiz_session.id,
         'is_in_time': is_in_time
     })
@@ -229,12 +268,13 @@ def create_quiz():
     for question_data in questions_data:
         question_text = question_data.get('text')
         question_time = question_data.get('duration')
+        question_type = question_data.get('type')
         answers_data = question_data.get('answers')
 
         if not question_text or not answers_data or not question_time:
             return jsonify({"error": "Each question must have text and answers"}), 400
 
-        question = Question(text=question_text, duration=question_time)
+        question = Question(text=question_text, duration=question_time, question_type=question_type)
         quiz.questions.append(question)
 
         for answer_data in answers_data:
@@ -300,3 +340,23 @@ def delete_quiz(quiz_id):
             return jsonify({"error": "Quiz not found"}), 404
     else:
             return jsonify({"error": "You not creator"}), 404
+    
+@bp.route('/archive_quiz/<int:quiz_id>', methods=['PATCH'])
+@login_required
+def archive_quiz(quiz_id):
+    quiz = Quiz.query.get(quiz_id)
+    if quiz:
+        quiz.is_archived = True
+        db.session.commit()
+        return jsonify({"message": "Квиз архивирован"}), 200
+    return jsonify({"message": "Квиз не найден"}), 404
+
+@bp.route('/unarchive_quiz/<int:quiz_id>', methods=['PATCH'])
+@login_required
+def unarchive_quiz(quiz_id):
+    quiz = Quiz.query.get(quiz_id)
+    if quiz:
+        quiz.is_archived = False
+        db.session.commit()
+        return jsonify({"message": "Квиз разархивирован"}), 200
+    return jsonify({"message": "Квиз не найден"}), 404

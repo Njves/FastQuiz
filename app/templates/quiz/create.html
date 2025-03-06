@@ -8,7 +8,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <title>Create Quiz</title>
+    <title>Создание викторины</title>
 </head>
 
 <body>
@@ -30,7 +30,9 @@
             <h3>Вопросы</h3>
             <div id="questions-list"></div>
 
-            <button type="button" id="add-question" class="btn btn-secondary">Добавить вопрос</button>
+            <button type="button" id="add-choice-question" class="btn btn-secondary">Добавить вопрос с выбором
+                ответа</button>
+            <button type="button" id="add-text-question" class="btn btn-secondary">Добавить текстовый вопрос</button>
 
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary">Создать викторину</button>
@@ -40,18 +42,19 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const addQuestionBtn = document.getElementById('add-question');
+            const addChoiceQuestionBtn = document.getElementById('add-choice-question');
+            const addTextQuestionBtn = document.getElementById('add-text-question');
             const questionsList = document.getElementById('questions-list');
             let questionIndex = 0;
 
-            // Add new question
-            addQuestionBtn.addEventListener('click', () => {
+            // Добавление вопроса с выбором ответа
+            addChoiceQuestionBtn.addEventListener('click', () => {
                 questionIndex++;
                 const questionHTML = `
             <div class="mb-3 question-item" id="question-${questionIndex}">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <label for="question-${questionIndex}-text" class="form-label">Текст вопроса</label>
+                        <label for="question-${questionIndex}-text" class="form-label">Текст вопроса (с выбором ответа)</label>
                         <input type="text" id="question-${questionIndex}-text" class="form-control" required>
                     </div>
                     <button type="button" class="btn btn-danger remove-question" data-question-index="${questionIndex}">Удалить вопрос</button>
@@ -74,7 +77,33 @@
                 questionsList.insertAdjacentHTML('beforeend', questionHTML);
             });
 
-            // Add answer functionality
+            // Добавление текстового вопроса
+            addTextQuestionBtn.addEventListener('click', () => {
+                questionIndex++;
+                const questionHTML = `
+            <div class="mb-3 question-item" id="question-${questionIndex}">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <label for="question-${questionIndex}-text" class="form-label">Текст вопроса (С полем ввода)</label>
+                        <input type="text" id="question-${questionIndex}-text" class="form-control" required>
+                    </div>
+                    <button type="button" class="btn btn-danger remove-question" data-question-index="${questionIndex}">Удалить вопрос</button>
+                </div>
+                <div class="mb-3">
+                    <label for="question-${questionIndex}-duration" class="form-label">Длительность (секунды)</label>
+                    <input type="number" id="question-${questionIndex}-duration" class="form-control" value="30" min="10" required>
+                </div>
+                <h5>Ответ</h5>
+                <div class="mb-3 answer-item">
+                    <label for="answer-${questionIndex}-0-text" class="form-label">Ответ</label>
+                    <input type="text" id="answer-${questionIndex}-0-text" class="form-control" required>
+                </div>
+            </div>
+        `;
+                questionsList.insertAdjacentHTML('beforeend', questionHTML);
+            });
+
+            // Добавление ответа
             document.body.addEventListener('click', (event) => {
                 if (event.target.classList.contains('add-answer')) {
                     const questionIndex = event.target.dataset.questionIndex;
@@ -91,7 +120,7 @@
                     answersList.insertAdjacentHTML('beforeend', answerHTML);
                 }
 
-                // Remove answer
+                // Удаление ответа
                 if (event.target.classList.contains('remove-answer')) {
                     const questionIndex = event.target.dataset.questionIndex;
                     const answerIndex = event.target.dataset.answerIndex;
@@ -99,7 +128,7 @@
                     answerItem.remove();
                 }
 
-                // Remove question
+                // Удаление вопроса
                 if (event.target.classList.contains('remove-question')) {
                     const questionIndex = event.target.dataset.questionIndex;
                     const questionItem = document.getElementById(`question-${questionIndex}`);
@@ -107,13 +136,13 @@
                 }
             });
 
-            // Validate and send form data as JSON
+            // Валидация и отправка данных формы
             document.getElementById('quiz-form').addEventListener('submit', (event) => {
                 event.preventDefault();
                 let valid = true;
 
-                const title = document.getElementById('title').value;
-                const description = document.getElementById('description').value;
+                const title = document.getElementById('title').value.trim();
+                const description = document.getElementById('description').value.trim();
 
                 if (!title) {
                     valid = false;
@@ -143,42 +172,49 @@
                 };
 
                 questions.forEach((question, questionIndex) => {
-                    const questionText = question.querySelector(`#question-${questionIndex + 1}-text`).value;
+                    const questionText = question.querySelector(`#question-${questionIndex + 1}-text`).value.trim();
                     const answers = [];
                     const answerItems = question.querySelectorAll('.answer-item');
                     const duration = parseInt(question.querySelector(`#question-${questionIndex + 1}-duration`).value, 10);
+                    const isChoiceQuestion = question.classList.contains('choice-question');
+                    const questionType = isChoiceQuestion ? 'choice' : 'text';
                     if (duration < 10) {
                         valid = false;
-                        alert(`Минимальная длительность для вопроса ${index + 1} - 10 секунд.`);
+                        alert(`Минимальная длительность для вопроса ${questionIndex + 1} - 10 секунд.`);
                         return;
                     }
-                    // Validate each question has at least 2 answers and only 1 correct answer
-                    if (answerItems.length < 2) {
+                    
+                    // Валидация наличия хотя бы двух ответов и только одного правильного для choice
+                    if (questionText === "") {
                         valid = false;
-                        alert(`Вопрос ${questionIndex + 1} должен иметь минимум два ответа.`);
+                        alert(`Вопрос ${questionIndex + 1} не может быть пустым.`);
                         return;
                     }
 
                     let correctAnswerCount = 0;
                     answerItems.forEach((answerItem, answerIndex) => {
                         const answerText = answerItem.querySelector(`input[id^="answer-${questionIndex + 1}-"]:not([type="checkbox"])`).value;
-                        const isCorrect = answerItem.querySelector('input[type="checkbox"]').checked;
 
-                        // Count correct answers
+                        // Проверка только для вопросов с вариантами ответа (не текстовых)
+                        const isCorrect = question.classList.contains('choice-question')
+                            ? answerItem.querySelector('input[type="checkbox"]').checked
+                            : true;  // Для текстовых вопросов правильный ответ по умолчанию считается всегда правильным
+
+                        // Подсчёт правильных ответов
                         if (isCorrect) correctAnswerCount++;
 
                         answers.push({ text: answerText, is_correct: isCorrect });
                     });
 
-                    if (correctAnswerCount !== 1) {
+                    // Проверка на количество правильных ответов
+                    if (question.classList.contains('choice-question') && correctAnswerCount !== 1) {
                         valid = false;
                         alert(`Вопрос ${questionIndex + 1} должен иметь только один правильный ответ.`);
                         return;
                     }
 
-                    quizData.questions.push({ text: questionText, answers, duration: duration});
+                    quizData.questions.push({ text: questionText, type: questionType, answers, duration: duration });
                 });
-
                 if (valid) {
                     fetch('/create_quiz', {
                         method: 'POST',
@@ -202,6 +238,7 @@
                 }
             });
         });
+
     </script>
 </body>
 

@@ -20,6 +20,7 @@ user_answer = db.Table('user_answer',
                            'question.id', ondelete='CASCADE')),
                        db.Column('answer_id', db.Integer, db.ForeignKey(
                            'answer.id', ondelete='CASCADE')),
+                       db.Column('text_answer', db.String(), nullable=True),
                        db.Column('is_correct', db.Boolean, default=False),
                        db.Column('submitted_at', db.DateTime,
                                  default=datetime.utcnow))
@@ -95,17 +96,27 @@ class Quiz(db.Model):
     count_question = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    is_archived = db.Column(db.Boolean, default=False)  
     questions = db.relationship(
         'Question', secondary=quiz_question, backref='quizzes', lazy='dynamic')
 
     def __repr__(self):
         return f'Quiz {self.id}, Title: {self.title}, Description: {self.description}, Questions: {self.count_question}'
+    
+    def archive(self):
+        """Архивирует квиз"""
+        self.is_archived = True
+
+    def restore(self):
+        """Восстанавливает квиз из архива"""
+        self.is_archived = False
 
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.String(), nullable=False)
     duration = db.Column(db.Integer, nullable=False, default=30)  # Длительность в секундах (по умолчанию 30 секунд)
+    question_type = db.Column(db.String(10), nullable=False, default='choice')  # 'choice' или 'text'
     answers = db.relationship('Answer', backref='question', lazy='dynamic')
 
     def __repr__(self):

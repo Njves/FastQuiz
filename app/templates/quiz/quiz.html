@@ -125,6 +125,25 @@
         margin-top: 10px;
         color: #333;
     }
+    .text-answer-container {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 10px;
+        width: 100%;
+    }
+
+    .text-answer-container input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+
+    .text-answer-container button {
+        margin-top: 10px;
+    }
 </style>
 
 <body style="display: none;">
@@ -144,6 +163,11 @@
                         Вы не успели ответить на вопрос!
                     </div>
                     <div id="answer-buttons" class="answer-buttons"></div>
+                    <!-- Блок для текстового ответа -->
+                    <div class="text-answer-container" id="text-answer-container", style="display: none;">
+                        <input type="text" id="text-answer" placeholder="Введите ваш ответ">
+                        <button class="btn" onclick="submitTextAnswer()">Ответить</button>
+                    </div>
                 </div>
             </div>
             <button id="next-button" class="btn" onclick="nextQuestion()">Следующий вопрос</button>
@@ -156,6 +180,7 @@
             const quizId = segments[2];
             return quizId ? parseInt(quizId, 10) : null;
         }
+        let questionType = "multiple_choice";
         let questionDuration = 0;
         let remainingTime = 0;
         let timerInterval;

@@ -65,6 +65,7 @@ h1, h2 {
                     <th>Описание</th>
                     <th>Кол-во вопросов</th>
                     <th>Дата создания</th>
+                    <th>Архивирование</th>
                     <th>Удаление</th>
                 </tr>
             </thead>
@@ -75,6 +76,13 @@ h1, h2 {
                     <td>{{ quiz.description }}</td>
                     <td>{{ quiz.count_question }}</td>
                     <td>{{ quiz.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        {% if quiz.is_archived %}
+                            <button class="btn-unarchive" data-quiz-id="{{ quiz.id }}">Разархивировать</button>
+                        {% else %}
+                            <button class="btn-archive" data-quiz-id="{{ quiz.id }}">Архивировать</button>
+                        {% endif %}
+                    </td>                    
                     <td>
                         <button class="btn-delete" data-quiz-id="{{ quiz.id }}">Удалить</button>
                     </td>
@@ -136,6 +144,61 @@ h1, h2 {
                     .catch(error => {
                         console.error('Ошибка:', error);
                         alert('Произошла ошибка при удалении квиза.');
+                    });
+                }
+            });
+        });
+        document.querySelectorAll('.btn-archive').forEach(button => {
+            button.addEventListener('click', (event) => {
+            const quizId = event.target.dataset.quizId;
+            const confirmArchive = confirm("Вы уверены, что хотите архивировать этот квиз?");
+            if (confirmArchive) {
+                fetch(`/archive_quiz/${quizId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        event.target.textContent = 'Разархивировать';
+                        event.target.classList.remove('btn-archive');
+                        event.target.classList.add('btn-unarchive');
+                    } else {
+                        alert('Ошибка при архивировании квиза');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    alert('Произошла ошибка при архивировании квиза.');
+                });
+            }
+        });
+    });
+
+        document.querySelectorAll('.btn-unarchive').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const quizId = event.target.dataset.quizId;
+                const confirmUnarchive = confirm("Вы уверены, что хотите разархивировать этот квиз?");
+                if (confirmUnarchive) {
+                    fetch(`/unarchive_quiz/${quizId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            event.target.textContent = 'Архивировать';
+                            event.target.classList.remove('btn-unarchive');
+                            event.target.classList.add('btn-archive');
+                        } else {
+                            alert('Ошибка при разархивировании квиза');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка:', error);
+                        alert('Произошла ошибка при разархивировании квиза.');
                     });
                 }
             });
