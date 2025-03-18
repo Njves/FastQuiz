@@ -262,7 +262,7 @@ def finish_quiz():
     else:
         db.session.delete(quiz_session)
     db.session.commit()
-    return jsonify({'score': final_score, 'message': 'Quiz finished'})
+    return jsonify({'score': final_score, 'attempt_id': quiz_session.attempt_id, 'message': 'Quiz finished'})
 
 
 @bp.route('/create_quiz', methods=['POST'])

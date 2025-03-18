@@ -125,6 +125,7 @@
         margin-top: 10px;
         color: #333;
     }
+
     .text-answer-container {
         display: none;
         flex-direction: column;
@@ -164,7 +165,7 @@
                     </div>
                     <div id="answer-buttons" class="answer-buttons"></div>
                     <!-- Блок для текстового ответа -->
-                    <div class="text-answer-container" id="text-answer-container", style="display: none;">
+                    <div class="text-answer-container" id="text-answer-container" , style="display: none;">
                         <input type="text" id="text-answer" placeholder="Введите ваш ответ">
                         <button class="btn" onclick="submitTextAnswer()">Ответить</button>
                     </div>
@@ -349,7 +350,10 @@
                     <div class="quiz-header">
                         <h1>Результаты викторины</h1>
                         <p>Ваш результат: ${score} из ${totalQuestions}</p>
-                        <button class="btn" onclick="restartQuiz()">Пройти квиз снова</button>
+                        <div class="button-container" style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 15px;">
+                            <button class="btn" onclick="restartQuiz()">Пройти квиз снова</button>
+                            <button class="btn" onclick="viewDetailedReport(${data.attempt_id})">Просмотреть подробный отчет</button>
+                        </div>
                     </div>
                 `;
                         localStorage.removeItem('sessionID_' + quizId);
@@ -414,6 +418,9 @@
                     submitAnswer(parseInt(answerButtons[0].getAttribute('data-id')), false)
                 }
             }, 1000);
+        }
+        function viewDetailedReport(attempt_id) {
+            window.location.href = `/attempt/${attempt_id}`;
         }
     </script>
 </body>
