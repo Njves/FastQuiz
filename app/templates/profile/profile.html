@@ -1,55 +1,58 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<style>body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
-    background-color: #f9f9f9;
-    color: #333;
-}
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f9f9f9;
+        color: #333;
+    }
 
-h1, h2 {
-    text-align: center;
-    color: #2c3e50;
-}
+    h1,
+    h2 {
+        text-align: center;
+        color: #2c3e50;
+    }
 
-.styled-table {
-    border-collapse: collapse;
-    margin: 20px auto;
-    font-size: 18px;
-    width: 80%;
-    text-align: left;
-    background-color: #ffffff;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-}
+    .styled-table {
+        border-collapse: collapse;
+        margin: 20px auto;
+        font-size: 18px;
+        width: 80%;
+        text-align: left;
+        background-color: #ffffff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
 
-.styled-table thead tr {
-    background-color: #2980b9;
-    color: #ffffff;
-    text-align: left;
-}
+    .styled-table thead tr {
+        background-color: #2980b9;
+        color: #ffffff;
+        text-align: left;
+    }
 
-.styled-table th, .styled-table td {
-    padding: 12px 15px;
-}
+    .styled-table th,
+    .styled-table td {
+        padding: 12px 15px;
+    }
 
-.styled-table tbody tr {
-    border-bottom: 1px solid #dddddd;
-}
+    .styled-table tbody tr {
+        border-bottom: 1px solid #dddddd;
+    }
 
-.styled-table tbody tr:nth-of-type(even) {
-    background-color: #f3f3f3;
-}
+    .styled-table tbody tr:nth-of-type(even) {
+        background-color: #f3f3f3;
+    }
 
-.styled-table tbody tr:last-of-type {
-    border-bottom: 2px solid #2980b9;
-}
+    .styled-table tbody tr:last-of-type {
+        border-bottom: 2px solid #2980b9;
+    }
 
-.styled-table tbody tr:hover {
-    background-color: #d3e9f9;
-}
+    .styled-table tbody tr:hover {
+        background-color: #d3e9f9;
+    }
 </style>
 
 <body>
@@ -58,67 +61,73 @@ h1, h2 {
     <!-- Таблица созданных квизов -->
     <h2>Созданные квизы</h2>
     {% if quizzes_created %}
-        <table class="styled-table">
-            <thead>
-                <tr>
-                    <th>Название</th>
-                    <th>Описание</th>
-                    <th>Кол-во вопросов</th>
-                    <th>Дата создания</th>
-                    <th>Архивирование</th>
-                    <th>Удаление</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for quiz in quizzes_created %}
-                <tr>
-                    <td>{{ quiz.title }}</td>
-                    <td>{{ quiz.description }}</td>
-                    <td>{{ quiz.count_question }}</td>
-                    <td>{{ quiz.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                    <td>
-                        {% if quiz.is_archived %}
-                            <button class="btn-unarchive" data-quiz-id="{{ quiz.id }}">Разархивировать</button>
-                        {% else %}
-                            <button class="btn-archive" data-quiz-id="{{ quiz.id }}">Архивировать</button>
-                        {% endif %}
-                    </td>                    
-                    <td>
-                        <button class="btn-delete" data-quiz-id="{{ quiz.id }}">Удалить</button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <table class="styled-table">
+        <thead>
+            <tr>
+                <th>Название</th>
+                <th>Описание</th>
+                <th>Кол-во вопросов</th>
+                <th>Дата создания</th>
+                <th>Архивирование</th>
+                <th>Удаление</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for quiz in quizzes_created %}
+            <tr>
+                <td>{{ quiz.title }}</td>
+                <td>{{ quiz.description }}</td>
+                <td>{{ quiz.count_question }}</td>
+                <td>{{ quiz.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td>
+                    {% if quiz.is_archived %}
+                    <button class="btn-unarchive" data-quiz-id="{{ quiz.id }}">Разархивировать</button>
+                    {% else %}
+                    <button class="btn-archive" data-quiz-id="{{ quiz.id }}">Архивировать</button>
+                    {% endif %}
+                </td>
+                <td>
+                    <button class="btn-delete" data-quiz-id="{{ quiz.id }}">Удалить</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     {% else %}
-        <p>Ты еще не создавал квизы.</p>
+    <p>Ты еще не создавал квизы.</p>
     {% endif %}
 
     <!-- Таблица результатов квизов -->
     <h2>Результаты квизов</h2>
     {% if results %}
-        <table class="styled-table">
-            <thead>
-                <tr>
-                    <th>ID квиза</th>
-                    <th>Название квиза</th>
-                    <th>Результат</th>
-                    <th>Максимальный результат</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for result in results %}
-                <tr>
-                    <td>{{ result[2] }}</td>
-                    <td>{{ result[0] }}</td>
-                    <td>{{ result[1] }}</td>
-                    <td>{{ result[3] }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <table class="styled-table">
+        <thead>
+            <tr>
+                <th>ID квиза</th>
+                <th>Название квиза</th>
+                <th>Результат</th>
+                <th>Максимальный результат</th>
+                <th>Детали</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for attempt_id, result in results.items() %}
+            <tr>
+                <td>{{ result.quiz_id }}</td>
+                <td>{{ result.quiz_title }}</td>
+                <td>{{ result.score }}</td>
+                <td>{{ result.count_question }}</td>
+                <td>
+                    <button class="btn-view" data-attempt-id="{{ attempt_id }}">
+                        Посмотреть
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     {% else %}
-        <p>Ты еще не прошел ни один квиз.</p>
+    <p>Ты еще не прошел ни один квиз.</p>
     {% endif %}
 </body>
 <script>
@@ -134,48 +143,47 @@ h1, h2 {
                             'Content-Type': 'application/json',
                         }
                     })
-                    .then(response => {
-                        if (response.ok) {
-                            location.reload();
-                        } else {
-                            alert('Ошибка при удалении квиза');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Ошибка:', error);
-                        alert('Произошла ошибка при удалении квиза.');
-                    });
+                        .then(response => {
+                            if (response.ok) {
+                                location.reload();
+                            } else {
+                                alert('Ошибка при удалении квиза');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Ошибка:', error);
+                            alert('Произошла ошибка при удалении квиза.');
+                        });
                 }
             });
         });
         document.querySelectorAll('.btn-archive').forEach(button => {
             button.addEventListener('click', (event) => {
-            const quizId = event.target.dataset.quizId;
-            const confirmArchive = confirm("Вы уверены, что хотите архивировать этот квиз?");
-            if (confirmArchive) {
-                fetch(`/archive_quiz/${quizId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        event.target.textContent = 'Разархивировать';
-                        event.target.classList.remove('btn-archive');
-                        event.target.classList.add('btn-unarchive');
-                    } else {
-                        alert('Ошибка при архивировании квиза');
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка:', error);
-                    alert('Произошла ошибка при архивировании квиза.');
-                });
-            }
+                const quizId = event.target.dataset.quizId;
+                const confirmArchive = confirm("Вы уверены, что хотите архивировать этот квиз?");
+                if (confirmArchive) {
+                    fetch(`/archive_quiz/${quizId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                        .then(response => {
+                            if (response.ok) {
+                                event.target.textContent = 'Разархивировать';
+                                event.target.classList.remove('btn-archive');
+                                event.target.classList.add('btn-unarchive');
+                            } else {
+                                alert('Ошибка при архивировании квиза');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Ошибка:', error);
+                            alert('Произошла ошибка при архивировании квиза.');
+                        });
+                }
+            });
         });
-    });
-
         document.querySelectorAll('.btn-unarchive').forEach(button => {
             button.addEventListener('click', (event) => {
                 const quizId = event.target.dataset.quizId;
@@ -187,20 +195,26 @@ h1, h2 {
                             'Content-Type': 'application/json',
                         }
                     })
-                    .then(response => {
-                        if (response.ok) {
-                            event.target.textContent = 'Архивировать';
-                            event.target.classList.remove('btn-unarchive');
-                            event.target.classList.add('btn-archive');
-                        } else {
-                            alert('Ошибка при разархивировании квиза');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Ошибка:', error);
-                        alert('Произошла ошибка при разархивировании квиза.');
-                    });
+                        .then(response => {
+                            if (response.ok) {
+                                event.target.textContent = 'Архивировать';
+                                event.target.classList.remove('btn-unarchive');
+                                event.target.classList.add('btn-archive');
+                            } else {
+                                alert('Ошибка при разархивировании квиза');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Ошибка:', error);
+                            alert('Произошла ошибка при разархивировании квиза.');
+                        });
                 }
+            });
+        });
+        document.querySelectorAll('.btn-view').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const attemptId = event.target.dataset.attemptId;
+                window.location.href = `/attempt/${attemptId}`;
             });
         });
     });

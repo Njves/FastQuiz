@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta
+from sqlalchemy.orm import aliased
 
 from flask import jsonify, render_template, request, flash, redirect, url_for
 from flask_login import current_user, login_required
 
-from app.models import Quiz, Question, Answer, User, QuizSession, quiz_score, user_answer
+from app.models import Attempt, Quiz, Question, Answer, User, QuizSession, quiz_score, user_answer
 
 from app import db
 from app.main import bp
@@ -12,24 +13,24 @@ from app.main import bp
 @bp.route('/', methods=['GET'])
 @login_required
 def index():
-    page = request.args.get('page', 1, type=int) 
+    page = request.args.get('page', 1, type=int)
     per_page = 3
     pagination = Quiz.query.filter_by(is_archived=False).paginate(
         page=page, per_page=per_page, error_out=False
     )
     if page > pagination.pages:
-        return redirect(url_for('main.index', page=pagination.pages))    
+        return redirect(url_for('main.index', page=pagination.pages))
     quiz_list = pagination.items
     next_url = url_for('main.index', page=pagination.next_num) \
         if pagination.has_next else None
     prev_url = url_for('main.index', page=pagination.prev_num) \
         if pagination.has_prev else None
-    return render_template('quiz/list.html', 
-                           quiz_list=quiz_list, 
-                           pagination=pagination, 
+    return render_template('quiz/list.html',
+                           quiz_list=quiz_list,
+                           pagination=pagination,
                            current_user=current_user,
-                           page=page, 
-                           next_url=next_url, 
+                           page=page,
+                           next_url=next_url,
                            prev_url=prev_url)
 
 
@@ -112,8 +113,14 @@ def start_quiz():
     first_question = quiz.questions.all()[0] if quiz.questions else None
     if not first_question:
         return jsonify({'message': 'No questions available for this quiz'}), 404
+    attempt = Attempt(
+        user_id=current_user.id,
+        quiz_id=quiz_id,
+    )
+    db.session.add(attempt)
+    db.session.commit()
     quiz_session = QuizSession(user_id=current_user.id, quiz_id=quiz_id,
-                               current_question_end_time=datetime.utcnow() + timedelta(seconds=first_question.duration))
+                               current_question_end_time=datetime.utcnow() + timedelta(seconds=first_question.duration), attempt_id=attempt.id)
     db.session.add(quiz_session)
     db.session.commit()
     answers = Answer.query.filter_by(question_id=first_question.id).all()
@@ -181,7 +188,8 @@ def submit_answer():
     correct_answer = None
     if not quiz_session:
         return jsonify({'message': 'Quiz session not found'}), 404
-    question = Quiz.query.get(quiz_session.quiz_id).questions.all()[quiz_session.current_question_index]
+    question = Quiz.query.get(quiz_session.quiz_id).questions.all()[
+        quiz_session.current_question_index]
     if not question:
         return jsonify({'message': 'Question not found'}), 404
 
@@ -200,11 +208,12 @@ def submit_answer():
             return jsonify({'message': 'Answer cannot be empty'}), 400
         correct_answer = question.answers[0]
         is_correct = True if correct_answer.lower() == text_answer.lower() else False
-        
+
     else:
         answer_id = request.json.get('answer_id')
         answer = Answer.query.get(answer_id)
-        correct_answer_id = Answer.query.filter_by(question_id=answer.question_id, is_correct=True).first().id
+        correct_answer_id = Answer.query.filter_by(
+            question_id=answer.question_id, is_correct=True).first().id
         if not answer:
             return jsonify({'message': 'Answer not found'}), 404
         is_correct = answer.is_correct if is_in_time else False
@@ -215,9 +224,10 @@ def submit_answer():
         user_ans = user_answer.insert().values(
             user_id=current_user.id,
             question_id=question.id,
-            answer_id=answer_id if question.question_type == "choice" else None,
+            answer_id=answer_id if question.question_type == "choice" and is_in_time else None,
             text_answer=text_answer if question.question_type == "text" else None,
             is_correct=is_correct,
+            attempt_id=quiz_session.attempt_id,
             submitted_at=datetime.utcnow()
         )
         db.session.execute(user_ans)
@@ -245,7 +255,9 @@ def finish_quiz():
         record = quiz_score.insert().values(user_id=current_user.id,
                                             quiz_id=quiz_session.quiz_id, score=final_score)
         db.session.execute(record)
-    db.session.delete(quiz_session)
+        quiz_session.finished_at = datetime.utcnow()
+    else:
+        db.session.delete(quiz_session)
     db.session.commit()
     return jsonify({'score': final_score, 'message': 'Quiz finished'})
 
@@ -274,7 +286,8 @@ def create_quiz():
         if not question_text or not answers_data or not question_time:
             return jsonify({"error": "Each question must have text and answers"}), 400
 
-        question = Question(text=question_text, duration=question_time, question_type=question_type)
+        question = Question(
+            text=question_text, duration=question_time, question_type=question_type)
         quiz.questions.append(question)
 
         for answer_data in answers_data:
@@ -303,28 +316,26 @@ def create_quiz_form():
 @login_required
 def profile():
     user = current_user
-    # Получение созданных квизов
     quizzes_created = user.quizzes_created.all()
+    sessions = [session for session in user.quiz_sessions if session.finished_at]
+    results_dict = {
+        session.attempt_id: {
+            'quiz_title': session.quiz.title,
+            'score': session.score,
+            'quiz_id': session.quiz.id,
+            'count_question': session.quiz.count_question,
+            'attempt_id': session.attempt_id
+        }
+        for session in sessions
+    }
 
-    # Получение результатов квизов с ID и количеством вопросов
-    results = db.session.execute(
-        db.select(
-            Quiz.title,         # Название квиза
-            quiz_score.c.score,  # Набранный результат
-            Quiz.id,            # ID квиза
-            Quiz.count_question  # Количество вопросов
-        )
-        .join(quiz_score, quiz_score.c.quiz_id == Quiz.id)
-        .filter(quiz_score.c.user_id == user.id)
-    ).all()
-
-    # Рендеринг шаблона с новыми данными
     return render_template(
         'profile/profile.html',
         user=user,
         quizzes_created=quizzes_created,
-        results=results
+        results=results_dict
     )
+
 
 @bp.route('/delete_quiz/<int:quiz_id>', methods=['DELETE'])
 @login_required
@@ -339,8 +350,9 @@ def delete_quiz(quiz_id):
         else:
             return jsonify({"error": "Quiz not found"}), 404
     else:
-            return jsonify({"error": "You not creator"}), 404
-    
+        return jsonify({"error": "You not creator"}), 404
+
+
 @bp.route('/archive_quiz/<int:quiz_id>', methods=['PATCH'])
 @login_required
 def archive_quiz(quiz_id):
@@ -351,6 +363,7 @@ def archive_quiz(quiz_id):
         return jsonify({"message": "Квиз архивирован"}), 200
     return jsonify({"message": "Квиз не найден"}), 404
 
+
 @bp.route('/unarchive_quiz/<int:quiz_id>', methods=['PATCH'])
 @login_required
 def unarchive_quiz(quiz_id):
@@ -360,3 +373,41 @@ def unarchive_quiz(quiz_id):
         db.session.commit()
         return jsonify({"message": "Квиз разархивирован"}), 200
     return jsonify({"message": "Квиз не найден"}), 404
+
+@bp.route('/attempt/<int:attempt_id>', methods=['GET'])
+@login_required
+def get_user_answers(attempt_id):
+    attempt = Attempt.query.get(attempt_id)
+    if not attempt:
+        return jsonify({"error": "Attempt not found"}), 404
+
+    quiz_session = attempt.sessions[0]
+    if not quiz_session or quiz_session.user_id != current_user.id:
+        return jsonify({"error": "Access denied"}), 403
+
+    CorrectAnswer = aliased(Answer)
+
+    answers = db.session.query(
+        Question.text.label("question"),
+        user_answer.c.text_answer.label("user_answer"),
+        Answer.text.label("answer"),
+        user_answer.c.is_correct,
+        db.session.query(CorrectAnswer.text)
+        .filter(CorrectAnswer.question_id == Question.id, CorrectAnswer.is_correct == True)
+        .scalar_subquery()
+        .label("correct_answer")
+    ).join(Question, Question.id == user_answer.c.question_id) \
+    .outerjoin(Answer, Answer.id == user_answer.c.answer_id) \
+    .filter(user_answer.c.attempt_id == attempt_id) \
+    .all()
+
+    result = [{
+        "question": a.question,
+        "user_answer": a.user_answer if a.user_answer is not None else a.answer,
+        "correct_answer": a.correct_answer,
+        "is_correct": int(a.is_correct)  # Преобразование в 0 или 1
+    } for a in answers]
+
+    total_score = sum(a['is_correct'] for a in result)
+
+    return render_template('profile/attempt_result.html', result=result, total_score=total_score)

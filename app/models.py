@@ -23,7 +23,10 @@ user_answer = db.Table('user_answer',
                        db.Column('text_answer', db.String(), nullable=True),
                        db.Column('is_correct', db.Boolean, default=False),
                        db.Column('submitted_at', db.DateTime,
-                                 default=datetime.utcnow))
+                                 default=datetime.utcnow),
+                       db.Column('attempt_id', db.Integer, db.ForeignKey(
+                           'attempt.id', ondelete='CASCADE'))
+                       )
 
 
 quiz_score = db.Table('quiz_score',
@@ -31,7 +34,8 @@ quiz_score = db.Table('quiz_score',
                           'user.id', ondelete='CASCADE')),
                       db.Column('quiz_id', db.Integer, db.ForeignKey(
                           'quiz.id', ondelete='CASCADE')),
-                      db.Column('score', db.Integer))
+                      db.Column('score', db.Integer)
+                      )
 
 quiz_creator = db.Table('quiz_creator',
                         db.Column('user_id', db.Integer, db.ForeignKey(
@@ -96,13 +100,13 @@ class Quiz(db.Model):
     count_question = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
-    is_archived = db.Column(db.Boolean, default=False)  
+    is_archived = db.Column(db.Boolean, default=False)
     questions = db.relationship(
         'Question', secondary=quiz_question, backref='quizzes', lazy='dynamic')
 
     def __repr__(self):
         return f'Quiz {self.id}, Title: {self.title}, Description: {self.description}, Questions: {self.count_question}'
-    
+
     def archive(self):
         """Архивирует квиз"""
         self.is_archived = True
@@ -115,8 +119,10 @@ class Quiz(db.Model):
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.String(), nullable=False)
-    duration = db.Column(db.Integer, nullable=False, default=30)  # Длительность в секундах (по умолчанию 30 секунд)
-    question_type = db.Column(db.String(10), nullable=False, default='choice')  # 'choice' или 'text'
+    # Длительность в секундах (по умолчанию 30 секунд)
+    duration = db.Column(db.Integer, nullable=False, default=30)
+    question_type = db.Column(
+        db.String(10), nullable=False, default='choice')  # 'choice' или 'text'
     answers = db.relationship('Answer', backref='question', lazy='dynamic')
 
     def __repr__(self):
@@ -140,14 +146,17 @@ class QuizSession(db.Model):
         'user.id', ondelete='CASCADE'))
     quiz_id = db.Column(db.Integer, db.ForeignKey(
         'quiz.id', ondelete='CASCADE'))
+    attempt_id = db.Column(db.Integer, db.ForeignKey('attempt.id', ondelete='CASCADE'))
     score = db.Column(db.Integer, default=0)
     current_question_index = db.Column(db.Integer, default=0)
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
-    finished_at = db.Column(db.DateTime, default=datetime.utcnow)
+    finished_at = db.Column(db.DateTime, nullable=True)
     current_question_end_time = db.Column(db.DateTime)
-    room_id = db.Column(db.Integer, db.ForeignKey('quiz_room.id'), nullable=True)
+    room_id = db.Column(db.Integer, db.ForeignKey(
+        'quiz_room.id'), nullable=True)
     is_current_question_answered = db.Column(db.Boolean, default=False)
-    
+
+    attempt = db.relationship('Attempt', backref='sessions')
     user = db.relationship('User', backref='quiz_sessions')
     quiz = db.relationship('Quiz', backref='sessions')
     room = db.relationship('QuizRoom', backref='sessions')
@@ -168,3 +177,20 @@ class QuizRoom(db.Model):
 
     def __repr__(self):
         return f'QuizRoom {self.id}, Quiz: {self.quiz_id}, Code: {self.room_code}, Host: {self.host_id}'
+
+
+class Attempt(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey(
+        'user.id', ondelete='CASCADE'))
+    quiz_id = db.Column(db.Integer, db.ForeignKey(
+        'quiz.id', ondelete='CASCADE'))
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    score = db.Column(db.Integer, default=0)
+
+    user = db.relationship('User', backref='attempts')
+    quiz = db.relationship('Quiz', backref='attempts')
+
+    def __repr__(self):
+        return f'Attempt {self.id}, User: {self.user_id}, Quiz: {self.quiz_id}, Score: {self.score}'
