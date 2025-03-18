@@ -1,6 +1,14 @@
 {% extends 'base.html' %}
 {% block content %}
     <div class="container-fluid">
+        <!-- Поисковая строка -->
+        <form method="get" action="{{ url_for('main.index') }}" class="mb-3">
+            <div class="input-group">
+                <input type="text" name="search" value="{{ search_query }}" placeholder="Поиск квиза..." class="form-control">
+                <button type="submit" class="btn btn-primary">Поиск</button>
+            </div>
+        </form>
+
         <div class="row">
             {% for quiz in quiz_list %}
                 <div class="col-md-4 d-flex">
@@ -23,10 +31,10 @@
             <ul class="pagination align-items-center">
                 {% if pagination.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('main.index', page=pagination.prev_num) }}">Предыдущая</a>
+                        <a class="page-link" href="{{ url_for('main.index', page=pagination.prev_num, search=search_query) }}">Предыдущая</a>
                     </li>
                 {% endif %}
-    
+
                 <li class="page-item d-flex align-items-center">
                     <span class="page-link d-flex align-items-center">
                         Страница 
@@ -38,16 +46,16 @@
                         из {{ pagination.pages }}
                     </span>
                 </li>
-    
+
                 {% if pagination.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('main.index', page=pagination.next_num) }}">Следующая</a>
+                        <a class="page-link" href="{{ url_for('main.index', page=pagination.next_num, search=search_query) }}">Следующая</a>
                     </li>
                 {% endif %}
             </ul>
         </nav>
     </div>
-    
+
     <script>
         document.getElementById("page-input").addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
@@ -55,15 +63,14 @@
                 let page = parseInt(this.value);
                 let maxPage = parseInt(this.getAttribute("max"));
                 let minPage = parseInt(this.getAttribute("min"));
-    
+
                 if (!isNaN(page) && page >= minPage && page <= maxPage) {
-                    window.location.href = "{{ url_for('main.index') }}?page=" + page;
+                    const search = new URLSearchParams(window.location.search).get("search") || "";
+                    window.location.href = "{{ url_for('main.index') }}?page=" + page + "&search=" + search;
                 } else {
                     alert("Введите число от " + minPage + " до " + maxPage);
                 }
             }
         });
     </script>
-    
-    
 {% endblock %}

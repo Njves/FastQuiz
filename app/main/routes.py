@@ -14,10 +14,12 @@ from app.main import bp
 @login_required
 def index():
     page = request.args.get('page', 1, type=int)
+    search_query = request.args.get('search', '', type=str).strip()
     per_page = 3
-    pagination = Quiz.query.filter_by(is_archived=False).paginate(
-        page=page, per_page=per_page, error_out=False
-    )
+    query = Quiz.query.filter_by(is_archived=False)
+    if search_query:
+        query = query.filter(Quiz.title.ilike(f"%{search_query}%") | Quiz.description.ilike(f"%{search_query}%"))
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     if page > pagination.pages:
         return redirect(url_for('main.index', page=pagination.pages))
     quiz_list = pagination.items
@@ -29,6 +31,7 @@ def index():
                            quiz_list=quiz_list,
                            pagination=pagination,
                            current_user=current_user,
+                           search_query=search_query,
                            page=page,
                            next_url=next_url,
                            prev_url=prev_url)
