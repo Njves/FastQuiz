@@ -207,11 +207,10 @@ def submit_answer():
     quiz_session.is_current_question_answered = True
     if question.question_type == "text":
         text_answer = request.json.get('text_answer', '').strip()
-        if not text_answer:
+        if not text_answer and is_in_time:
             return jsonify({'message': 'Answer cannot be empty'}), 400
-        correct_answer = question.answers[0]
-        is_correct = True if correct_answer.lower() == text_answer.lower() else False
-
+        correct_answer = question.answers[0].text
+        is_correct = True if correct_answer.lower() == text_answer.lower() and is_in_time else False
     else:
         answer_id = request.json.get('answer_id')
         answer = Answer.query.get(answer_id)
@@ -220,8 +219,8 @@ def submit_answer():
         if not answer:
             return jsonify({'message': 'Answer not found'}), 404
         is_correct = answer.is_correct if is_in_time else False
-        if answer.is_correct and is_in_time:
-            quiz_session.score += 1
+    if is_correct:
+        quiz_session.score += 1
     # Запись в бд перепроверить позже
     if not current_user.is_guest:
         user_ans = user_answer.insert().values(
@@ -240,7 +239,8 @@ def submit_answer():
     return jsonify({
         'message': 'Answer received',
         'correct_answer_id': correct_answer_id,
-        'correct_answer': correct_answer_id,
+        'is_correct': is_correct,
+        'correct_answer': correct_answer,
         'session_id': quiz_session.id,
         'is_in_time': is_in_time
     })

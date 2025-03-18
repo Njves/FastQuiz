@@ -164,11 +164,11 @@
                         Вы не успели ответить на вопрос!
                     </div>
                     <div id="answer-buttons" class="answer-buttons"></div>
-                    <!-- Блок для текстового ответа -->
                     <div class="text-answer-container" id="text-answer-container" , style="display: none;">
                         <input type="text" id="text-answer" placeholder="Введите ваш ответ">
-                        <button class="btn" onclick="submitTextAnswer()">Ответить</button>
+                        <button class="btn" onclick="submitAnswer()">Ответить</button>
                     </div>
+                    <div id="result-message" style="display: none;"></div>
                 </div>
             </div>
             <button id="next-button" class="btn" onclick="nextQuestion()">Следующий вопрос</button>
@@ -181,7 +181,6 @@
             const quizId = segments[2];
             return quizId ? parseInt(quizId, 10) : null;
         }
-        let questionType = "multiple_choice";
         let questionDuration = 0;
         let remainingTime = 0;
         let timerInterval;
@@ -189,6 +188,7 @@
         let sessionID = localStorage.getItem('sessionID_' + quizId);
         let isRequestInProgress = false;
         let isAnswerSubmitted = false;
+        let questionType = 'choice'
         const token = localStorage.getItem('auth_token');
         function startQuizRequest(quiz_id) {
             if (isRequestInProgress) return;
@@ -227,44 +227,71 @@
             remainingTime = questionDuration
             document.getElementById('question-text').innerText = questionData.text;
             document.getElementById('question-count').innerText = `Вопрос ${data.number + 1} из ${data.count_question}`;
-
+            document.getElementById('result-message').style.display = 'none'
             const answersContainer = document.getElementById('answer-buttons');
+            const textAnswerContainer = document.getElementById('text-answer-container')
             answersContainer.innerHTML = '';
             if (data.number + 1 === data.count_question) {
                 document.getElementById('next-button').textContent = "Finish Quiz"
             }
-            questionData.answers.forEach(answer => {
-                const button = document.createElement('button');
-                button.classList.add('btn');
-                button.setAttribute('data-id', answer.id);
-                button.innerText = answer.text;
-                button.onclick = () => submitAnswer(answer.id);
-                answersContainer.appendChild(button);
-            });
+            questionType = questionData.type
+            if (questionType === 'text') {
+                textAnswerContainer.style.display = 'block';
+            } else {
+                textAnswerContainer.style.display = 'none';
+                questionData.answers.forEach(answer => {
+                    const button = document.createElement('button');
+                    button.classList.add('btn');
+                    button.setAttribute('data-id', answer.id);
+                    button.innerText = answer.text;
+                    button.onclick = () => submitAnswer(answer.id);
+                    answersContainer.appendChild(button);
+                });
+            }
             startTimer();
             document.getElementById('time-up-message').style.display = 'none';
         }
 
-        function submitAnswer(answerID, timerNotEnd = true) {
+        function submitAnswer(answerID = null, timerNotEnd = true) {
             if (isRequestInProgress || isAnswerSubmitted) return; // Предотвращаем повторный запрос
             isRequestInProgress = true;
             isAnswerSubmitted = true;
             clearInterval(timerInterval);
             document.getElementById('timer').style.display = 'none'; // Скрыть таймер
+            let answerData = {};
+            const textAnswer = document.getElementById('text-answer').value;
+            if (questionType === 'choice') {
+                answerData = {
+                    answer_id: answerID,
+                    session_id: sessionID,
+                    is_in_time: timerNotEnd
+                };
+            } else if (questionType === 'text') {
+                answerData = {
+                    text_answer: textAnswer,
+                    session_id: sessionID,
+                    is_in_time: timerNotEnd
+                };
+            }
             fetch('/submit_answer', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ answer_id: answerID, session_id: sessionID, is_in_time: timerNotEnd })
+                body: JSON.stringify(answerData)
             })
                 .then(response => response.json())
                 .then(data => {
                     isRequestInProgress = false;
                     if (data.message === 'Answer received') {
-                        localStorage.setItem('answerID', answerID);
-                        highlightAnswers(data.correct_answer_id, data.is_in_time);
+                        if (questionType === 'choice') {
+                            localStorage.setItem('answerID', answerID);
+                            highlightAnswers(data.correct_answer_id, data.is_in_time);
+                        } else if (questionType === 'text') {
+                            localStorage.setItem('textAnswer', textAnswer);
+                            highlightTextAnswer(data.is_correct, data.correct_answer, data.is_in_time);
+                        }
                     } else {
                         console.error(data.message);
                     }
@@ -295,7 +322,24 @@
             });
             document.getElementById('next-button').style.display = 'flex';
         }
+        function highlightTextAnswer(isCorrect, correctAnswer, isInTime) {
+            let textAnswer = localStorage.getItem('textAnswer')
+            const textAnswerContainer = document.getElementById('text-answer-container');
+            if (!isInTime) {
+                document.getElementById('time-up-message').style.display = 'block';
+            }
+            textAnswerContainer.style.display = 'none';
+            const resultMessage = document.getElementById('result-message');
+            resultMessage.style.display = 'block';
+            resultMessage.innerHTML = '';
+            if (isCorrect) {
+                resultMessage.innerHTML = `Ваш ответ '${textAnswer}' верный`;
+            } else {
+                resultMessage.innerHTML = `Вы ответили: '${textAnswer}', но правильный ответ: '${correctAnswer}'`;
+            }
 
+            document.getElementById('next-button').style.display = 'flex';
+        }
         function nextQuestion() {
             if (isRequestInProgress) return; // Предотвращаем повторный запрос
             isRequestInProgress = true;
@@ -394,8 +438,13 @@
             if (data.message === 'Answer already submitted') {
                 document.getElementById('timer').style.display = 'none'
                 isAnswerSubmitted = true;
-                highlightAnswers(data.correct_answer_id, data.is_in_time);
-                document.getElementById('next-button').style.display = 'flex';
+                if (data.question.type === 'choice') {
+                    highlightAnswers(data.correct_answer_id, data.is_in_time);
+                } else if (data.question.type === 'text') {
+                    highlightTextAnswer(data.is_correct, data.correct_answer, data.is_in_time);
+                }
+                document.getElementById('next-button').style.display = 'flex'
+                clearInterval(timerInterval);
                 return;
             }
             remainingTime = Math.floor(data.remaining_time);
@@ -415,7 +464,7 @@
                 document.getElementById('timer').style.display = 'block';
                 if (remainingTime <= 0) {
                     clearInterval(timerInterval);
-                    submitAnswer(parseInt(answerButtons[0].getAttribute('data-id')), false)
+                    submitAnswer(null, false)
                 }
             }, 1000);
         }
