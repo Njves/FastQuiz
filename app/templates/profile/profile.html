@@ -68,6 +68,7 @@
                 <th>Описание</th>
                 <th>Кол-во вопросов</th>
                 <th>Дата создания</th>
+                <th>Пароль</th>
                 <th>Архивирование</th>
                 <th>Удаление</th>
             </tr>
@@ -79,6 +80,13 @@
                 <td>{{ quiz.description }}</td>
                 <td>{{ quiz.count_question }}</td>
                 <td>{{ quiz.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td>
+                    {% if quiz.password %}
+                    <span>{{ quiz.password }}</span>
+                    {% else %}
+                    <span> </span>
+                    {% endif %}
+                    <button class="btn-password" data-quiz-id="{{ quiz.id }}">Изменить</button>
                 <td>
                     {% if quiz.is_archived %}
                     <button class="btn-unarchive" data-quiz-id="{{ quiz.id }}">Разархивировать</button>
@@ -215,6 +223,33 @@
             button.addEventListener('click', (event) => {
                 const attemptId = event.target.dataset.attemptId;
                 window.location.href = `/attempt/${attemptId}`;
+            });
+        });
+        document.querySelectorAll(".btn-password").forEach(button => {
+            button.addEventListener("click", function () {
+                const quizId = this.getAttribute("data-quiz-id");
+                const newPassword = prompt("Введите новый пароль для квиза (оставьте пустым для удаления):");
+
+                if (newPassword !== null) {
+                    fetch(`/quiz/${quizId}/set_password`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${localStorage.getItem('auth_token')}`
+                        },
+                        body: JSON.stringify({ password: newPassword })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert("Пароль успешно изменен!");
+                                location.reload();  // Перезагрузка страницы для обновления данных
+                            } else {
+                                alert("Ошибка: " + data.message);
+                            }
+                        })
+                        .catch(error => console.error("Ошибка при смене пароля:", error));
+                }
             });
         });
     });

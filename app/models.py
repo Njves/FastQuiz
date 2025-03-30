@@ -101,6 +101,7 @@ class Quiz(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
     is_archived = db.Column(db.Boolean, default=False)
+    password = db.Column(db.String())
     questions = db.relationship(
         'Question', secondary=quiz_question, backref='quizzes', lazy='dynamic')
 
@@ -124,7 +125,6 @@ class Question(db.Model):
     question_type = db.Column(
         db.String(10), nullable=False, default='choice')  # 'choice' или 'text'
     answers = db.relationship('Answer', backref='question', lazy='dynamic')
-
     def __repr__(self):
         return f'Question {self.id}, Text: {self.text}'
 

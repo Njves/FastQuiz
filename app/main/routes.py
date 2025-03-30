@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from sqlalchemy.orm import aliased
 
-from flask import jsonify, render_template, request, flash, redirect, url_for
+from flask import jsonify, render_template, request, flash, redirect, session, url_for
 from flask_login import current_user, login_required
 
 from app.models import Attempt, Quiz, Question, Answer, User, QuizSession, quiz_score, user_answer
@@ -37,12 +37,30 @@ def index():
                            prev_url=prev_url)
 
 
-@bp.route('/quiz/<int:quiz_id>')
+@bp.route('/quiz/<int:quiz_id>', methods=['GET', 'POST'])
 @login_required
 def quiz(quiz_id):
     quiz = Quiz.query.get(quiz_id)
     if not quiz:
         return jsonify({'message': 'Quiz not found'}), 404
+    if quiz.is_archived:
+        return redirect(url_for('main.index'))
+    print(quiz.password)
+    if quiz.password:
+        print(session, request.form)
+        print(session.get(f'quiz_access_{quiz_id}_{quiz.password}'))
+        if session.get(f'quiz_access_{quiz_id}_{quiz.password}'):
+            return render_template('quiz/quiz.html', quiz=quiz)
+        if request.method == 'POST':
+            user_password = request.form.get('password')
+            print(user_password)
+            if quiz.password == user_password:
+                session[f'quiz_access_{quiz_id}_{quiz.password}'] = True
+                return redirect(url_for('main.quiz', quiz_id=quiz_id))
+            else:
+                return render_template('quiz/password_prompt.html', quiz_id=quiz_id, error="Неверный пароль")
+        return render_template('quiz/password_prompt.html', quiz_id=quiz_id)
+
     return render_template('quiz/quiz.html', quiz=quiz)
 
 
@@ -272,12 +290,14 @@ def create_quiz():
     title = data.get('title')
     description = data.get('description')
     questions_data = data.get('questions')
+    password = data.get('password')
     if not title or not description or not questions_data:
         return jsonify({"error": "Missing required fields"}), 400
     quiz = Quiz(
         title=title,
         description=description,
-        count_question=len(questions_data)
+        count_question=len(questions_data),
+        password=password
     )
     db.session.add(quiz)
     for question_data in questions_data:
@@ -414,3 +434,18 @@ def get_user_answers(attempt_id):
     total_score = sum(a['is_correct'] for a in result)
 
     return render_template('profile/attempt_result.html', result=result, total_score=total_score)
+
+@bp.route('/quiz/<int:quiz_id>/set_password', methods=['POST'])
+@login_required
+def set_quiz_password(quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
+
+    if quiz.creators[0].id != current_user.id:
+        return jsonify({"success": False, "message": "Вы не можете изменить пароль этого квиза"}), 403
+
+    data = request.get_json()
+    new_password = data.get("password")
+    quiz.password = new_password
+
+    db.session.commit()
+    return jsonify({"success": True, "message": "Пароль успешно обновлен"})
