@@ -71,6 +71,7 @@
                 <th>Пароль</th>
                 <th>Архивирование</th>
                 <th>Удаление</th>
+                <th>csv</th>
             </tr>
         </thead>
         <tbody>
@@ -97,6 +98,9 @@
                 <td>
                     <button class="btn-delete" data-quiz-id="{{ quiz.id }}">Удалить</button>
                 </td>
+                <td>
+                    <a href="{{ url_for('main.export_quiz_results', quiz_id=quiz.id) }}" class="btn-export">Экспорт CSV</a>
+                </td>                
             </tr>
             {% endfor %}
         </tbody>

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, joinedload
 
-from flask import jsonify, render_template, request, flash, redirect, session, url_for
+from flask import Response, jsonify, render_template, request, flash, redirect, session, stream_with_context, url_for
 from flask_login import current_user, login_required
 
 from app.models import Attempt, Quiz, Question, Answer, User, QuizSession, quiz_score, user_answer
@@ -18,7 +18,8 @@ def index():
     per_page = 3
     query = Quiz.query.filter_by(is_archived=False)
     if search_query:
-        query = query.filter(Quiz.title.ilike(f"%{search_query}%") | Quiz.description.ilike(f"%{search_query}%"))
+        query = query.filter(Quiz.title.ilike(
+            f"%{search_query}%") | Quiz.description.ilike(f"%{search_query}%"))
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     if page > pagination.pages:
         return redirect(url_for('main.index', page=pagination.pages))
@@ -228,7 +229,8 @@ def submit_answer():
         if not text_answer and is_in_time:
             return jsonify({'message': 'Answer cannot be empty'}), 400
         correct_answer = question.answers[0].text
-        is_correct = True if correct_answer.lower() == text_answer.lower() and is_in_time else False
+        is_correct = True if correct_answer.lower(
+        ) == text_answer.lower() and is_in_time else False
     else:
         answer_id = request.json.get('answer_id')
         answer = Answer.query.get(answer_id)
@@ -277,8 +279,10 @@ def finish_quiz():
                                             quiz_id=quiz_session.quiz_id, score=final_score)
         db.session.execute(record)
         quiz_session.finished_at = datetime.utcnow()
+        quiz_session.attempt.completed_at = datetime.utcnow()
     else:
         db.session.delete(quiz_session)
+        db.session.delete(quiz_session.attempt)
     db.session.commit()
     return jsonify({'score': final_score, 'attempt_id': quiz_session.attempt_id, 'message': 'Quiz finished'})
 
@@ -364,7 +368,6 @@ def profile():
 @login_required
 def delete_quiz(quiz_id):
     quiz = Quiz.query.get(quiz_id)
-    print(quiz.creators)
     if current_user in quiz.creators:
         if quiz:
             db.session.delete(quiz)
@@ -397,6 +400,7 @@ def unarchive_quiz(quiz_id):
         return jsonify({"message": "Квиз разархивирован"}), 200
     return jsonify({"message": "Квиз не найден"}), 404
 
+
 @bp.route('/attempt/<int:attempt_id>', methods=['GET'])
 @login_required
 def get_user_answers(attempt_id):
@@ -420,9 +424,9 @@ def get_user_answers(attempt_id):
         .scalar_subquery()
         .label("correct_answer")
     ).join(Question, Question.id == user_answer.c.question_id) \
-    .outerjoin(Answer, Answer.id == user_answer.c.answer_id) \
-    .filter(user_answer.c.attempt_id == attempt_id) \
-    .all()
+        .outerjoin(Answer, Answer.id == user_answer.c.answer_id) \
+        .filter(user_answer.c.attempt_id == attempt_id) \
+        .all()
 
     result = [{
         "question": a.question,
@@ -434,6 +438,7 @@ def get_user_answers(attempt_id):
     total_score = sum(a['is_correct'] for a in result)
 
     return render_template('profile/attempt_result.html', result=result, total_score=total_score)
+
 
 @bp.route('/quiz/<int:quiz_id>/set_password', methods=['POST'])
 @login_required
@@ -449,3 +454,77 @@ def set_quiz_password(quiz_id):
 
     db.session.commit()
     return jsonify({"success": True, "message": "Пароль успешно обновлен"})
+
+
+
+@bp.route('/quiz/<int:quiz_id>/export_results', methods=['GET'])
+@login_required
+def export_quiz_results(quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
+    if quiz.creators[0].id != current_user.id:
+        return jsonify({"success": False, "message": "Вы не можете экспортировать результаты этого квиза"}), 403
+
+    # Загружаем все попытки, чтобы избежать проблем с сессией
+    attempts = db.session.query(Attempt).options(
+        joinedload(Attempt.user),
+        joinedload(Attempt.quiz)
+    ).filter_by(quiz_id=quiz_id).all()
+
+    # Получаем все уникальные вопросы, чтобы сделать их заголовками
+    questions = db.session.query(Question).join(user_answer, Question.id == user_answer.c.question_id) \
+        .filter(user_answer.c.attempt_id.in_([a.id for a in attempts])) \
+        .distinct().all()
+
+    CorrectAnswer = aliased(Answer)
+
+    # Загружаем ответы пользователей
+    all_answers = []
+    for attempt in attempts:
+        answers = db.session.query(
+            Question.text.label("question"),
+            user_answer.c.text_answer.label("user_answer"),
+            Answer.text.label("answer"),
+            user_answer.c.is_correct,
+            db.session.query(CorrectAnswer.text)
+            .filter(CorrectAnswer.question_id == Question.id, CorrectAnswer.is_correct == True)
+            .scalar_subquery()
+            .label("correct_answer")
+        ).join(Question, Question.id == user_answer.c.question_id) \
+        .outerjoin(Answer, Answer.id == user_answer.c.answer_id) \
+        .filter(user_answer.c.attempt_id == attempt.id) \
+        .all()
+
+        # Создаём словарь для ответов в колонках
+        answer_dict = {
+            "Пользователь": attempt.user.username,
+            "Оценка": attempt.score,
+            "Всего вопросов": attempt.quiz.count_question,
+        }
+
+        for q in questions:
+            answer_entry = next((a for a in answers if a.question == q.text), None)
+            if answer_entry is None:
+                continue
+            answer_dict[f"Вопрос: {q.text}"] = answer_entry.user_answer if answer_entry.user_answer else answer_entry.answer
+            answer_dict[f"Правильный ответ"] = answer_entry.correct_answer if answer_entry else ""
+
+        all_answers.append(answer_dict)
+
+    # Закрываем сессию перед генерацией CSV
+    db.session.close()
+
+    def generate():
+        # Формируем заголовки
+        fieldnames = ["Пользователь", "Оценка", "Всего вопросов"] + \
+                     [f"Вопрос: {q.text}" for q in questions] + \
+                     [f"Правильный ответ" for _ in questions]
+
+        yield ",".join(fieldnames) + "\n"
+
+        # Заполняем строки пользователей
+        for row in all_answers:
+            yield ",".join(str(row.get(field, "")) for field in fieldnames) + "\n"
+
+    response = Response(stream_with_context(generate()), content_type="text/csv")
+    response.headers["Content-Disposition"] = f"attachment; filename=quiz_{quiz_id}_results.csv"
+    return response
