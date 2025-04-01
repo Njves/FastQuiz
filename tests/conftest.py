@@ -15,7 +15,7 @@ def test_app():
     app.config.update({
         "TESTING": True,
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "WTF_CSRF_ENABLED": False  # Для упрощения тестов
+        "WTF_CSRF_ENABLED": False
     })
     with app.app_context():
         db.create_all()
@@ -28,11 +28,10 @@ def test_app():
 def live_server(test_app):
     """Запускает тестовый сервер Flask в отдельном потоке."""
     server = make_server("localhost", 5000, test_app)
-    # Установите daemon=True
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     yield server
-    server.shutdown()  # Останавливает сервер после завершения тестов
+    server.shutdown()
     thread.join()
 
 
@@ -118,6 +117,6 @@ def login_for_test(selenium_driver, live_server, base_url, prepare_data):
     username_field = selenium_driver.find_element(By.NAME, "username")
     password_field = selenium_driver.find_element(By.NAME, "password")
     login_button = selenium_driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-    username_field.send_keys("testuser")  # Replace with valid username
-    password_field.send_keys("password123")  # Replace with valid password
+    username_field.send_keys("testuser")
+    password_field.send_keys("password123")
     login_button.click()

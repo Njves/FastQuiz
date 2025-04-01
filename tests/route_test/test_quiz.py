@@ -51,7 +51,7 @@ def test_quiz_flow(client, simple_quiz, create_user):
         "answer_id": uncorrect_answer.id,
         "is_in_time": True
     }, headers=headers)
-    assert submit_response.status_code == 200
+    assert submit_response.status_code == 400
     assert submit_response.json["message"] == "Answer already submitted"
     next_response = client.post(
         '/next_question', json={"session_id": session_id}, headers=headers)

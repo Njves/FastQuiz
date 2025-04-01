@@ -5,8 +5,8 @@ from selenium.webdriver.support import expected_conditions as EC
 
 def test_navigation_to_pages(selenium_driver, login_for_test, live_server):
    
-    courses_link = WebDriverWait(selenium_driver, 2).until(
-        EC.element_to_be_clickable((By.LINK_TEXT, "Список курсов"))
+    courses_link = WebDriverWait(selenium_driver, 3).until(
+        EC.element_to_be_clickable((By.LINK_TEXT, "Список квизов"))
     )
     courses_link.click()
     assert "http://localhost:5000/" in selenium_driver.current_url

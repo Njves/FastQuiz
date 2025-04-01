@@ -16,13 +16,15 @@ def test_create_quiz_form(client, selenium_driver, base_url, login_for_test, liv
     description_field = selenium_driver.find_element(By.ID, "description")
     title_field.send_keys("Test Quiz Title")
     description_field.send_keys("Test Quiz Description")
-    add_question_button = selenium_driver.find_element(By.ID, "add-question")
+    add_question_button = selenium_driver.find_element(By.ID, "add-choice-question")
     add_question_button.click()
     question_text_field = selenium_driver.find_element(
         By.ID, "question-1-text")
     question_text_field.send_keys("What is 2 + 2?")
     add_answer_button = selenium_driver.find_element(
         By.CSS_SELECTOR, "#question-1 .add-answer")
+    selenium_driver.execute_script("arguments[0].scrollIntoView(true);", add_answer_button)
+    time.sleep(0.5)
     add_answer_button.click()
     answer_1_text = selenium_driver.find_element(By.ID, "answer-1-0-text")
     answer_1_correct = selenium_driver.find_element(

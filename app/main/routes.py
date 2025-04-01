@@ -235,9 +235,7 @@ def submit_answer():
         answer_id = request.json.get('answer_id')
         answer = Answer.query.get(answer_id)
         correct_answer_id = Answer.query.filter_by(
-            question_id=answer.question_id, is_correct=True).first().id
-        if not answer:
-            return jsonify({'message': 'Answer not found'}), 404
+            question_id=question.id, is_correct=True).first().id
         is_correct = answer.is_correct if is_in_time else False
     if is_correct:
         quiz_session.score += 1
