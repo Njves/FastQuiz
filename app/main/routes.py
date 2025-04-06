@@ -46,10 +46,8 @@ def quiz(quiz_id):
         return jsonify({'message': 'Quiz not found'}), 404
     if quiz.is_archived:
         return redirect(url_for('main.index'))
-    print(quiz.password)
+    print("Password: ", quiz.password)
     if quiz.password:
-        print(session, request.form)
-        print(session.get(f'quiz_access_{quiz_id}_{quiz.password}'))
         if session.get(f'quiz_access_{quiz_id}_{quiz.password}'):
             return render_template('quiz/quiz.html', quiz=quiz)
         if request.method == 'POST':
@@ -282,7 +280,7 @@ def finish_quiz():
         db.session.delete(quiz_session)
         db.session.delete(quiz_session.attempt)
     db.session.commit()
-    return jsonify({'score': final_score, 'attempt_id': quiz_session.attempt_id, 'message': 'Quiz finished'})
+    return jsonify({'score': final_score, 'attempt_id': quiz_session.attempt_id, 'message': 'Quiz finished', "is_guest": current_user.is_guest})
 
 
 @bp.route('/create_quiz', methods=['POST'])
