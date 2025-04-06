@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from sqlalchemy.orm import aliased, joinedload
+from sqlalchemy import and_
 
 from flask import Response, jsonify, render_template, request, flash, redirect, session, stream_with_context, url_for
 from flask_login import current_user, login_required
@@ -464,8 +465,12 @@ def export_quiz_results(quiz_id):
     attempts = db.session.query(Attempt).options(
         joinedload(Attempt.user),
         joinedload(Attempt.quiz)
-    ).filter_by(quiz_id=quiz_id).all()
-
+    ).filter(
+        and_(
+            Attempt.quiz_id == quiz_id,
+            Attempt.completed_at.isnot(None)
+        )
+    ).all()
     # Получаем все уникальные вопросы, чтобы сделать их заголовками
     questions = db.session.query(Question).join(user_answer, Question.id == user_answer.c.question_id) \
         .filter(user_answer.c.attempt_id.in_([a.id for a in attempts])) \
