@@ -67,7 +67,6 @@
                 <th>Название</th>
                 <th>Описание</th>
                 <th>Кол-во вопросов</th>
-                <th>Дата создания</th>
                 <th>Пароль</th>
                 <th>Архивирование</th>
                 <th>Удаление</th>
@@ -77,10 +76,12 @@
         <tbody>
             {% for quiz in quizzes_created %}
             <tr>
-                <td><a href="{{ url_for('main.quiz', quiz_id=quiz.id) }}">{{ quiz.title }}</a></td>
+                <td><a href="{{ url_for('main.quiz', quiz_id=quiz.id) }}">{{ quiz.title }}</a>
+                    <a href="{{ url_for('main.edit_quiz_soft', quiz_id=quiz.id) }}" title="Редактировать"
+                        style="text-decoration: none;">✏️</a>
+                </td>
                 <td>{{ quiz.description }}</td>
                 <td>{{ quiz.count_question }}</td>
-                <td>{{ quiz.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                 <td>
                     {% if quiz.password %}
                     <span>{{ quiz.password }}</span>
@@ -99,8 +100,9 @@
                     <button class="btn-delete" data-quiz-id="{{ quiz.id }}">Удалить</button>
                 </td>
                 <td>
-                    <a href="{{ url_for('main.export_quiz_results', quiz_id=quiz.id) }}" class="btn-export">Экспорт CSV</a>
-                </td>                
+                    <a href="{{ url_for('main.export_quiz_results', quiz_id=quiz.id) }}" class="btn-export">Экспорт
+                        CSV</a>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
