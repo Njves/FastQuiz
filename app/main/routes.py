@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import aliased, joinedload
 from sqlalchemy import and_
 
-from flask import Response, jsonify, render_template, request, flash, redirect, session, stream_with_context, url_for
+from flask import current_app, Response, jsonify, render_template, request, flash, redirect, session, stream_with_context, url_for
 from flask_login import current_user, login_required
 
 from app.models import Attempt, Quiz, Question, Answer, User, QuizSession, quiz_score, user_answer
@@ -529,3 +529,78 @@ def export_quiz_results(quiz_id):
     response = Response(stream_with_context(generate()), content_type="text/csv")
     response.headers["Content-Disposition"] = f"attachment; filename=quiz_{quiz_id}_results.csv"
     return response
+
+@bp.route('/quiz/<int:quiz_id>/edit/soft', methods=['GET'])
+@login_required
+def edit_quiz_soft(quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
+    return render_template('quiz/edit_quiz_soft.html', quiz=quiz)
+
+@bp.route('/quiz/<int:quiz_id>/edit/soft', methods=['POST'])
+@login_required
+def update_quiz_soft(quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
+    quiz.title = request.form['title']
+    quiz.description = request.form['description']
+    for question in quiz.questions:
+        new_text = request.form.get(f"question_{question.id}")
+        if new_text:
+            question.text = new_text
+    db.session.commit()
+    flash("Квиз обновлён (мягкое редактирование)", "success")
+    return redirect(url_for('main.edit_quiz_soft', quiz_id=quiz.id))
+
+# Жёсткое редактирование (создание нового квиза)
+@bp.route('/quiz/<int:quiz_id>/edit/hard', methods=['GET'])
+def edit_quiz_hard(quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
+    questions = [q.to_dict() for q in quiz.questions]
+    return render_template("quiz/edit_quiz_hard.html", quiz=quiz.to_dict(), questions=questions)
+
+
+@bp.route('/quiz/<int:quiz_id>/edit/hard', methods=['POST'])
+def update_quiz_hard(quiz_id):
+    old_quiz = Quiz.query.get_or_404(quiz_id)
+    old_quiz.is_archived = True
+    db.session.commit()
+
+    data = request.get_json()
+    title = data.get('title')
+    description = data.get('description')
+    questions_data = data.get('questions')
+    password = data.get('password')
+    if not title or not description or not questions_data:
+        return jsonify({"error": "Missing required fields"}), 400
+    quiz = Quiz(
+        title=title,
+        description=description,
+        count_question=len(questions_data),
+        password=password
+    )
+    db.session.add(quiz)
+    for question_data in questions_data:
+        question_text = question_data.get('text')
+        question_time = question_data.get('duration')
+        question_type = question_data.get('type')
+        answers_data = question_data.get('answers')
+
+        if not question_text or not answers_data or not question_time:
+            return jsonify({"error": "Each question must have text and answers"}), 400
+
+        question = Question(
+            text=question_text, duration=question_time, question_type=question_type)
+        quiz.questions.append(question)
+
+        for answer_data in answers_data:
+            answer_text = answer_data.get('text')
+            is_correct = answer_data.get('is_correct', False)
+            if not answer_text:
+                return jsonify({"error": "Each answer must have text"}), 400
+            answer = Answer(
+                text=answer_text,
+                is_correct=is_correct
+            )
+            question.answers.append(answer)
+    quiz.creators.append(current_user)
+    db.session.commit()
+    return jsonify({"redirect_url": url_for('main.edit_quiz_soft', quiz_id=quiz.id)})

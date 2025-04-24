@@ -115,6 +115,19 @@ class Quiz(db.Model):
     def restore(self):
         """Восстанавливает квиз из архива"""
         self.is_archived = False
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'count_question': self.count_question,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'is_archived': self.is_archived,
+            'password': self.password,
+            'questions': [q.to_dict() for q in self.questions]
+        }
 
 
 class Question(db.Model):
@@ -125,8 +138,18 @@ class Question(db.Model):
     question_type = db.Column(
         db.String(10), nullable=False, default='choice')  # 'choice' или 'text'
     answers = db.relationship('Answer', backref='question', lazy='dynamic')
+
     def __repr__(self):
-        return f'Question {self.id}, Text: {self.text}'
+        return f'Question {self.id}, Text: {self.text}, question_type: {self.question_type}'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'text': self.text,
+            'duration': self.duration,
+            'question_type': self.question_type,
+            'answers': [a.to_dict() for a in self.answers]
+        }
 
 
 class Answer(db.Model):
@@ -138,6 +161,13 @@ class Answer(db.Model):
 
     def __repr__(self):
         return f'Answer {self.id}, Text: {self.text}, Is Correct: {self.is_correct}'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'text': self.text,
+            'is_correct': self.is_correct
+        }
 
 
 class QuizSession(db.Model):
@@ -146,7 +176,8 @@ class QuizSession(db.Model):
         'user.id', ondelete='CASCADE'))
     quiz_id = db.Column(db.Integer, db.ForeignKey(
         'quiz.id', ondelete='CASCADE'))
-    attempt_id = db.Column(db.Integer, db.ForeignKey('attempt.id', ondelete='CASCADE'))
+    attempt_id = db.Column(db.Integer, db.ForeignKey(
+        'attempt.id', ondelete='CASCADE'))
     score = db.Column(db.Integer, default=0)
     current_question_index = db.Column(db.Integer, default=0)
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
