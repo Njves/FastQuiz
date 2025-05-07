@@ -161,6 +161,10 @@
                 <h1>{{ quiz.title }}</h1>
                 <p>{{ quiz.description }}</p>
                 <span id="question-count">Всего вопросов: {{ quiz.count_question }}</span>
+                {% if quiz.end_time %}
+                    <span id="question-end">Квиз будет закрыт: {{ quiz.end_time }}</span>
+                    {% endif %}
+
             </div>
             <div id="timer"></div>
             <button id="start-button" class="btn" onclick="startQuizRequest({{ quiz.id }})">Начать квиз</button>

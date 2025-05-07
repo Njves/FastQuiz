@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5 text-center">
+    <div class="card shadow-lg p-4">
+        <h2 class="text-danger mb-3">Квиз недоступен</h2>
+        <p class="fs-4">Квиз <strong>"{{ quiz.title }}"</strong> архивирован и в данный момент недоступен.</p>
+        {% if quiz.start_time %}
+        <p id="question-start" class="fs-4">Квиз откроется {{ quiz.start_time }} {% if quiz.end_time %} и закроется  {{ quiz.end_time }} {% endif %}</p>
+        {% endif %}
+        <p class="text-muted">Это решение было принято организатором квиза.</p>
+    </div>
+</div>
+{% endblock %}

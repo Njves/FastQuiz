@@ -105,6 +105,9 @@ class Quiz(db.Model):
     questions = db.relationship(
         'Question', secondary=quiz_question, backref='quizzes', lazy='dynamic')
 
+    start_time = db.Column(db.DateTime, nullable=True)
+    end_time = db.Column(db.DateTime, nullable=True)
+
     def __repr__(self):
         return f'Quiz {self.id}, Title: {self.title}, Description: {self.description}, Questions: {self.count_question}'
 
@@ -128,6 +131,13 @@ class Quiz(db.Model):
             'password': self.password,
             'questions': [q.to_dict() for q in self.questions]
         }
+    
+    def is_available(self):
+        """Проверяет, доступен ли квиз сейчас (по времени)"""
+        now = datetime.now()
+        if self.start_time and self.end_time:
+            return self.start_time <= now <= self.end_time
+        return True
 
 
 class Question(db.Model):

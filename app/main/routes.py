@@ -45,9 +45,11 @@ def quiz(quiz_id):
     quiz = Quiz.query.get(quiz_id)
     if not quiz:
         return jsonify({'message': 'Quiz not found'}), 404
+    if not quiz.is_available():
+        quiz.is_archived = True
+        db.session.commit()
     if quiz.is_archived:
-        return redirect(url_for('main.index'))
-    print("Password: ", quiz.password)
+        return render_template('quiz/quiz_archived.html', quiz=quiz)
     if quiz.password:
         if session.get(f'quiz_access_{quiz_id}_{quiz.password}'):
             return render_template('quiz/quiz.html', quiz=quiz)
@@ -341,6 +343,10 @@ def create_quiz_form():
 def profile():
     user = current_user
     quizzes_created = user.quizzes_created.all()
+    for quiz in quizzes_created:
+        if not quiz.is_available():
+            quiz.is_archived = True
+            db.session.commit()
     sessions = [session for session in user.quiz_sessions if session.finished_at]
     results_dict = {
         session.attempt_id: {
@@ -392,6 +398,8 @@ def archive_quiz(quiz_id):
 def unarchive_quiz(quiz_id):
     quiz = Quiz.query.get(quiz_id)
     if quiz:
+        quiz.start_time = None
+        quiz.end_time = None
         quiz.is_archived = False
         db.session.commit()
         return jsonify({"message": "Квиз разархивирован"}), 200
@@ -542,6 +550,10 @@ def update_quiz_soft(quiz_id):
     quiz = Quiz.query.get_or_404(quiz_id)
     quiz.title = request.form['title']
     quiz.description = request.form['description']
+    start_time_str = request.form.get('start_time')
+    end_time_str = request.form.get('end_time')
+    quiz.start_time = datetime.fromisoformat(start_time_str) if start_time_str else None
+    quiz.end_time = datetime.fromisoformat(end_time_str) if end_time_str else None
     for question in quiz.questions:
         new_text = request.form.get(f"question_{question.id}")
         if new_text:
