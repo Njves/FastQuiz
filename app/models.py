@@ -115,7 +115,7 @@ class Quiz(db.Model):
     def restore(self):
         """Восстанавливает квиз из архива"""
         self.is_archived = False
-    
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -161,7 +161,7 @@ class Answer(db.Model):
 
     def __repr__(self):
         return f'Answer {self.id}, Text: {self.text}, Is Correct: {self.is_correct}'
-    
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -225,3 +225,15 @@ class Attempt(db.Model):
 
     def __repr__(self):
         return f'Attempt {self.id}, User: {self.user_id}, Quiz: {self.quiz_id}, Score: {self.score}'
+
+
+class QuizComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
+    # пользователь, оставивший комментарий
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    quiz = db.relationship('Quiz', backref='comments')
+    author = db.relationship('User', backref='comments_given')

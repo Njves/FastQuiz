@@ -76,7 +76,7 @@
         <tbody>
             {% for quiz in quizzes_created %}
             <tr>
-                <td><a href="{{ url_for('main.quiz', quiz_id=quiz.id) }}">{{ quiz.title }}</a>
+                <td><a href="{{ url_for('main.quiz_comments', quiz_id=quiz.id) }}">{{ quiz.title }}</a>
                     <a href="{{ url_for('main.edit_quiz_soft', quiz_id=quiz.id) }}" title="Редактировать"
                         style="text-decoration: none;">✏️</a>
                 </td>

@@ -5,7 +5,7 @@ from sqlalchemy import and_
 from flask import current_app, Response, jsonify, render_template, request, flash, redirect, session, stream_with_context, url_for
 from flask_login import current_user, login_required
 
-from app.models import Attempt, Quiz, Question, Answer, User, QuizSession, quiz_score, user_answer
+from app.models import Attempt, Quiz, Question, Answer, User, QuizSession, quiz_score, user_answer, QuizComment
 
 from app import db
 from app.main import bp
@@ -604,3 +604,27 @@ def update_quiz_hard(quiz_id):
     quiz.creators.append(current_user)
     db.session.commit()
     return jsonify({"redirect_url": url_for('main.edit_quiz_soft', quiz_id=quiz.id)})
+
+@bp.route('/quiz/<int:quiz_id>/comment', methods=['POST'])
+@login_required
+def add_comment(quiz_id):
+    data = request.get_json()
+    content = data.get('content')
+    if not content:
+        return jsonify({'error': 'Комментарий не может быть пустым'}), 400
+
+    quiz = Quiz.query.get_or_404(quiz_id)
+    comment = QuizComment(
+        quiz_id=quiz.id,
+        author_id=current_user.id,
+        content=content
+    )
+    db.session.add(comment)
+    db.session.commit()
+    return jsonify({'message': 'Комментарий успешно добавлен'})
+
+@bp.route('/quiz/<int:quiz_id>/comments')
+def quiz_comments(quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
+    comments = QuizComment.query.filter_by(quiz_id=quiz_id).order_by(QuizComment.created_at.desc()).all()
+    return render_template('quiz/quiz_comments.html', quiz=quiz, comments=comments)

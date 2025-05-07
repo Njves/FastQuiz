@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .comment-page {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 30px;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .comment-page h2 {
+        text-align: center;
+        font-size: 28px;
+        margin-bottom: 30px;
+        color: #333;
+    }
+
+    .comment-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .comment-item {
+        background-color: #f8f9fa;
+        border-left: 4px solid #2980b9;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .comment-item:hover {
+        background-color: #eef2f3;
+    }
+
+    .comment-item strong {
+        color: #2e7d32;
+        font-size: 16px;
+    }
+
+    .comment-item em {
+        float: right;
+        color: #888;
+        font-size: 14px;
+    }
+
+    .comment-item p {
+        margin-top: 10px;
+        color: #444;
+    }
+
+    .btn-back {
+        display: inline-block;
+        margin-top: 25px;
+        padding: 10px 20px;
+        background-color: #2980b9;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: bold;
+        transition: background-color 0.2s ease;
+    }
+</style>
+
+<div class="comment-page">
+    <h2>💬 Комментарии к квизу: <a href="{{ url_for('main.quiz', quiz_id=quiz.id) }}">{{ quiz.title }}</a></h2>
+    
+    {% if comments %}
+        <ul class="comment-list">
+            {% for comment in comments %}
+                <li class="comment-item">
+                    <div>
+                        <strong>{{ comment.author.username if comment.author else 'Гость' }}</strong>
+                        <em>{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</em>
+                    </div>
+                    <p>{{ comment.content }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p style="text-align: center; color: #666;">Комментариев пока нет. Будьте первым!</p>
+    {% endif %}
+</div>
+{% endblock %}

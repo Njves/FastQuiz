@@ -8,6 +8,13 @@
         font-family: Arial, sans-serif;
     }
 
+    #comment {
+        padding: 10px;
+        /* добавит отступ внутри поля */
+        box-sizing: border-box;
+        /* чтобы padding не*
+
+
     html {
         overflow-x: hidden;
         /* Убираем горизонтальный скролл для всей страницы */
@@ -390,7 +397,6 @@
                         const score = data.score;
                         const totalQuestions = document.getElementById('question-count').innerText.split(" из ")[1];
                         document.getElementById('quiz-body').style.display = 'none';
-
                         let detailedReportButton = data.is_guest
                             ? ''
                             : `<button class="btn" onclick="viewDetailedReport(${data.attempt_id})">Просмотреть подробный отчет</button>`;
@@ -404,8 +410,34 @@
                                         ${detailedReportButton}
                                     </div>
                                 </div>
+                                <div class="comment-container">
+                                    <form id="comment-form">
+                                        <label for="comment">Оставьте комментарий автору:</label><br>
+                                        <textarea id="comment" name="comment" rows="4" cols="50" required></textarea><br>
+                                        <button type="submit">Отправить</button>
+                                    </form>
+                                </div>
                             `;
                         localStorage.removeItem('sessionID_' + quizId);
+                        document.getElementById('comment-form').addEventListener('submit', function (e) {
+                            e.preventDefault();
+
+                            const comment = document.getElementById('comment').value;
+                            fetch('/quiz/{{ quiz.id }}/comment', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ content: comment })
+                            }).then(res => {
+                                if (res.ok) {
+                                    alert('Комментарий отправлен!');
+                                    restartQuiz()
+                                } else {
+                                    alert('Ошибка при отправке комментария.');
+                                }
+                            });
+                        });
                     } else {
                         console.error(data.message);
                     }
@@ -472,9 +504,6 @@
                     submitAnswer(null, false)
                 }
             }, 1000);
-        }
-        function viewDetailedReport(attempt_id) {
-            window.location.href = `/attempt/${attempt_id}`;
         }
     </script>
 </body>
