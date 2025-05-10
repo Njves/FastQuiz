@@ -36,4 +36,4 @@ def create_app(config_class=Config):
     app.register_blueprint(room_bp)
     return app
 
-from app import models
+from app import admin, models
